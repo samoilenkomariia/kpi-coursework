@@ -1,20 +1,34 @@
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 public class LRUCache<K,V> {
     private final LRUCacheSegment<K,V>[] segments;
     private final int segmentMask;
 
     public LRUCache(int capacity, int concurrencyLevel) {
-        if (capacity <= 0 || concurrencyLevel <= 0) {
-            throw new IllegalArgumentException("Capacity and concurrency level must be positive");
+        if (concurrencyLevel <= 0) {
+            throw new IllegalArgumentException("Concurrency level must be positive");
         }
         int validConcurrencyLevel = 1;
-        while (validConcurrencyLevel < concurrencyLevel) { // ensure cap is closest bigger power of 2
+        while (validConcurrencyLevel < concurrencyLevel) { // cap should be closest bigger power of 2
             validConcurrencyLevel *= 2;
         }
         this.segments = new LRUCacheSegment[validConcurrencyLevel];
         this.segmentMask = validConcurrencyLevel - 1;
-        int segmentCap = (int) Math.ceil((double) capacity / validConcurrencyLevel);
-        for (int i = 0; i  < validConcurrencyLevel; i++) {
-            segments[i] = new LRUCacheSegment<>(segmentCap);
+
+        calculateCapacity(capacity, validConcurrencyLevel);
+    }
+
+    private void calculateCapacity(int cap, int concLvl) {
+        int baseCap = cap / concLvl;
+        int remainingItems = cap % concLvl;
+        for (int i = 0; i < concLvl; i++) {
+            if (remainingItems > 0) {
+                segments[i] = new LRUCacheSegment<>(baseCap + 1);
+                remainingItems--;
+            }
+            else segments[i] = new LRUCacheSegment<>(baseCap);
         }
     }
 
@@ -37,5 +51,10 @@ public class LRUCache<K,V> {
             size += s.size();
         }
         return size;
+    }
+
+    @Override
+    public String toString() {
+        return Arrays.toString(segments);
     }
 }
