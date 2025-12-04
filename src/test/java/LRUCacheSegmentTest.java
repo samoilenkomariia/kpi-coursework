@@ -32,6 +32,16 @@ public class LRUCacheSegmentTest {
     }
 
     @Test
+    void testGetNonExistentKey() {
+        LRUCacheSegment<Character,Character> cache = new LRUCacheSegment<>(3);
+        assertNull(cache.get('A'));
+        for (char i = 'B'; i <= 'F'; i++) {
+            cache.put(i, i);
+        }
+        assertNull(cache.get('A'));
+    }
+
+    @Test
     void testOneCapacity() {
         LRUCacheSegment<Character,Character> cache = new LRUCacheSegment<>(1);
         for (char a = 'A'; a <= 'G'; a++) {
