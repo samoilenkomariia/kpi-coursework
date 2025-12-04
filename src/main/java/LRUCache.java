@@ -1,6 +1,4 @@
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 public class LRUCache<K,V> {
     private final LRUCacheSegment<K,V>[] segments;
