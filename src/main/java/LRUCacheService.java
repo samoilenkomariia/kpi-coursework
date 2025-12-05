@@ -13,7 +13,13 @@ public class LRUCacheService {
     private static int threadPoolSize = 50;
 
     public static void main(String[] args) throws IOException {
-        cache = new LRUCache<>(100, 16);
+        int capacity = 100;
+        int concurrencyLevel = 16;
+        if (args.length > 0) {
+            capacity = Integer.parseInt(args[0]);
+            concurrencyLevel = Integer.parseInt(args[1]);
+        }
+        cache = new LRUCache<>(capacity, concurrencyLevel);
         ExecutorService threadPool = Executors.newFixedThreadPool(threadPoolSize);
 
         try (ServerSocket socket = new ServerSocket(PORT)) {
@@ -46,7 +52,7 @@ public class LRUCacheService {
             } finally {
                 try {
                     socket.close();
-                } catch (IOException e) {
+                } catch (IOException ignored) {
                     //ignore
                 }
             }
@@ -54,12 +60,15 @@ public class LRUCacheService {
 
         private void processCommand(String line, PrintWriter output) {
             String[] parts = line.trim().split("\\s+");
-            if (parts.length == 0) return;
+            if (parts.length == 0) {
+                output.println("ERROR_EMPTY_COMMAND");
+                return;
+            }
             String command = parts[0].toUpperCase();
             try {
                 switch (command) {
                     case "PUT" -> {
-                        if (parts.length < 3) {
+                        if (parts.length != 3) {
                             output.println("ERROR_USAGE_PUT");
                         } else {
                             String key = parts[1];
@@ -69,7 +78,7 @@ public class LRUCacheService {
                         }
                     }
                     case "GET" -> {
-                        if (parts.length < 2) {
+                        if (parts.length != 2) {
                             output.println("ERROR_USAGE_GET");
                         } else {
                             String key = parts[1];
