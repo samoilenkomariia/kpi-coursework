@@ -52,4 +52,27 @@ public class LRUCacheSegmentTest {
         assertEquals(1, size, "expected %d, got %d".formatted(1, size));
         assertEquals('G', cache.get('G'), "expected 'G, got %s".formatted('G'));
     }
+
+    @Test
+    void testGetPromotionToMRU() {
+        LRUCacheSegment<Character,Character> cache = new LRUCacheSegment<>(3);
+        for (char a = 'A'; a <= 'C'; a++) {
+            cache.put(a, a);
+        }
+        var mru = cache.get('A');
+        cache.put('D', 'D');
+        assertNotNull(cache.get(mru), "MRU element is expected to be present after eviction");
+        assertNull(cache.get('B'), "LRU element should've been evicted, but was found");
+    }
+
+    @Test
+    void testPutExistingKey() {
+        LRUCacheSegment<Character,Character> cache = new LRUCacheSegment<>(3);
+        for (char a = 'A'; a <= 'C'; a++) {
+            cache.put(a, a);
+        }
+        cache.put('A', 'Z');
+        char actual = cache.get('A');
+        assertEquals('Z', actual, "expected Z, got %s".formatted(actual));
+    }
 }

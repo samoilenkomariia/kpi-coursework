@@ -30,7 +30,7 @@ public class LRUCacheSegment<K,V> {
 
     public LRUCacheSegment(int capacity) {
         if (capacity <= 0) {
-            throw new IllegalArgumentException("Capacity must be positive");
+            throw new IllegalArgumentException("Illegal capacity: " + capacity);
         }
         this.capacity = capacity;
         this.map = new HashMap<>();

@@ -6,11 +6,17 @@ public class LRUCache<K,V> {
 
     public LRUCache(int capacity, int concurrencyLevel) {
         if (concurrencyLevel <= 0) {
-            throw new IllegalArgumentException("Concurrency level must be positive");
+            throw new IllegalArgumentException("Illegal initial concurrency level: " + concurrencyLevel);
+        }
+        if (capacity <= 0) {
+            throw new IllegalArgumentException("Illegal initial capacity: " + capacity);
         }
         int validConcurrencyLevel = 1;
-        while (validConcurrencyLevel < concurrencyLevel) { // cap should be closest bigger power of 2
-            validConcurrencyLevel *= 2;
+        while (validConcurrencyLevel < concurrencyLevel) {
+            validConcurrencyLevel *= 2; // cap should be closest bigger power of 2
+        }
+        while (validConcurrencyLevel > capacity) {
+            validConcurrencyLevel /= 2;
         }
         this.segments = new LRUCacheSegment[validConcurrencyLevel];
         this.segmentMask = validConcurrencyLevel - 1;
