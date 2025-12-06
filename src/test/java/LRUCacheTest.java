@@ -86,4 +86,43 @@ public class LRUCacheTest {
         int actualSize = cache.size();
         assertTrue(actualSize <= capacity, "Cache size must not exceed set capacity %d, actual %d".formatted(capacity, actualSize));
     }
+
+    private long runBenchmark(ILRUCache<Integer,Integer> cache, int nThreads, int nOperations) throws InterruptedException {
+        ExecutorService pool = Executors.newFixedThreadPool(nThreads);
+        int opPerThread = nOperations / nThreads;
+        CountDownLatch latch = new CountDownLatch(nThreads);
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < nThreads; i++) {
+            pool.submit(() -> {
+                try {
+                    for(int j = 0; j < opPerThread; j++) {
+                        cache.put(j, j);
+                        cache.get(j);
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+        long end = System.currentTimeMillis();
+        pool.shutdown();
+        return end - start;
+    }
+
+    @Test
+    void benchmarkShardingVsSingleLock() throws InterruptedException {
+        int operations = 20000000;
+        int threads = 100;
+
+        System.out.println("Benchmark sharding vs single lock");
+        LRUCacheSegment<Integer,Integer> singleLockCache = new LRUCacheSegment<>(1000);
+        long timeSingle = runBenchmark(singleLockCache, threads, operations);
+        System.out.println("Single lock Cache time(ms): " + timeSingle);
+
+        LRUCache<Integer,Integer> shardedCache = new LRUCache<>(1000, 512);
+        long timeSharded = runBenchmark(shardedCache, threads, operations);
+        System.out.println("Sharded Cache time(ms): " + timeSharded);
+        System.out.printf("Speedup: %.2fx%n", (double)timeSingle / timeSharded);
+    }
 }
