@@ -71,8 +71,11 @@ public class LRUCacheSegmentTest {
         for (char a = 'A'; a <= 'C'; a++) {
             cache.put(a, a);
         }
+        int size = cache.size();
         cache.put('A', 'Z');
         char actual = cache.get('A');
         assertEquals('Z', actual, "expected Z, got %s".formatted(actual));
+        int updatedSize = cache.size();
+        assertEquals(size, updatedSize, "Cache size should not have changed, expected %d, got %d".formatted(size, updatedSize));
     }
 }
