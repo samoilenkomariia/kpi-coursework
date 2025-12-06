@@ -1,4 +1,10 @@
 import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class LRUCacheTest {
@@ -45,5 +51,39 @@ public class LRUCacheTest {
         System.out.print("testing concurrency lvl == capacity " + cache);
         assertEquals(5, cache.size(), "expected size 5, got %d".formatted( cache.size()));
 
+    }
+
+    @Test
+    void testConcurrentCapacityInvariance() throws InterruptedException {
+        int capacity = 100;
+        LRUCache<String,Integer> cache = new LRUCache<>(capacity, 16);
+        int threads = 50;
+        int operationsPerThread = 10000;
+        ExecutorService service = Executors.newFixedThreadPool(threads);
+        CountDownLatch latch = new CountDownLatch(threads);
+        AtomicBoolean failed = new AtomicBoolean(false);
+
+        for (int i = 0; i < threads; i++) {
+            final int id = i;
+            service.submit(() -> {
+                try {
+                    for (int j = 0; j < operationsPerThread; j++) {
+                        String key = "key-" + id;
+                        cache.put(key, j);
+                        if (j % 2 == 0) cache.get(key);
+                    }
+                } catch (Exception e) {
+                    failed.set(true);
+                    e.printStackTrace();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+        service.shutdown();
+        assertFalse(failed.get(), "Exception(s) occurred during thread execution");
+        int actualSize = cache.size();
+        assertTrue(actualSize <= capacity, "Cache size must not exceed set capacity %d, actual %d".formatted(capacity, actualSize));
     }
 }
