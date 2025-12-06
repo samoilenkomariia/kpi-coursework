@@ -13,7 +13,7 @@ public class LRUCacheClientTest {
     static void startServer() {
         server = new Thread(() -> {
             try {
-                LRUCacheService.main(new String[]{"1000", "16"});
+                LRUCacheService.main(new String[]{"1000", "512"});
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -44,7 +44,7 @@ public class LRUCacheClientTest {
     @Test
     void testDefaultClientRequests() {
         assertDoesNotThrow(() -> {
-            LRUCacheClient.runTest();
+            LRUCacheClient.runTest(); // 50 clients, 1000 requests
         }, "Client failed with execution during sanity test for default initial parameters");
         System.out.println();
     }

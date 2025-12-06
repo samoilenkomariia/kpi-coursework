@@ -123,7 +123,6 @@ public class LRUCacheServiceTest {
         }
     }
 
-// redundant integration test below to remove
     @Test
     void testConcurrentClientsAtOnce() throws InterruptedException, ExecutionException {
         int clientCount = 100;
