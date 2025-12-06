@@ -35,7 +35,9 @@ public class LRUCacheServiceTest {
             try (Socket s = new Socket("localhost", PORT)) {
                 return;
             } catch (IOException e) {
-                try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ignored) {}
             }
         }
         throw new RuntimeException("Server did not start within 5 seconds");
@@ -121,6 +123,7 @@ public class LRUCacheServiceTest {
         }
     }
 
+// redundant integration test below to remove
     @Test
     void testConcurrentClientsAtOnce() throws InterruptedException, ExecutionException {
         int clientCount = 100;
