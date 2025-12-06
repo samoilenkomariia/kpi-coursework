@@ -42,6 +42,18 @@ public class LRUCacheSegmentTest {
     }
 
     @Test
+    void testPutGetNullValue() {
+        LRUCacheSegment<Character,Character> cache = new LRUCacheSegment<>(3);
+        cache.put('K', null);
+        cache.put('A', null);
+        System.out.println("testing put null value " + cache);
+        int size = cache.size();
+        assertEquals(2, size, "expected cache size %d, but got %d".formatted(2, size));
+        assertNull(cache.get('K'));
+        assertNull(cache.get('A'));
+    }
+
+    @Test
     void testOneCapacity() {
         LRUCacheSegment<Character,Character> cache = new LRUCacheSegment<>(1);
         for (char a = 'A'; a <= 'G'; a++) {
