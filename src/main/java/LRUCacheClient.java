@@ -34,11 +34,40 @@ public class LRUCacheClient {
                 pool.shutdownNow();
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
         long end = System.nanoTime();
         printStatistics(start, end);
+    }
 
+    public static void runTest() {
+        runTest(CLIENTS, REQUESTS_PER_CLIENT);
+    }
+
+    public static void runTest(int clients, int requests) {
+        if (clients <= 0 || requests <= 0) {
+            throw new IllegalArgumentException("Number of clients and requests must be positive");
+        }
+        if (clients == CLIENTS && requests == REQUESTS_PER_CLIENT) {
+            successfulRequests.set(0);
+            failedRequests.set(0);
+            latency.set(0);
+            main(new String[]{});
+            return;
+        }
+        int oldClients = CLIENTS;
+        int oldReqs = REQUESTS_PER_CLIENT;
+        try {
+            CLIENTS = clients;
+            REQUESTS_PER_CLIENT = requests;
+            successfulRequests.set(0);
+            failedRequests.set(0);
+            latency.set(0);
+            main(new String[]{});
+        } finally {
+            CLIENTS = oldClients;
+            REQUESTS_PER_CLIENT = oldReqs;
+        }
     }
 
     private static void printStatistics(long startTime, long endTime) {
@@ -53,7 +82,8 @@ public class LRUCacheClient {
                 Failed requests %d
                 Total time %fs
                 Throughput %f req/s
-                Latency %fms""", CLIENTS, REQUESTS_PER_CLIENT, totalRequests,
+                Latency %fms
+                """, CLIENTS, REQUESTS_PER_CLIENT, totalRequests,
                 successfulRequests.get(), failedRequests.get(), time,
                 throughputS, latencyMs);
     }
