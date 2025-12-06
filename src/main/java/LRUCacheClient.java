@@ -13,7 +13,7 @@ public class LRUCacheClient {
     private static final String HOST = "localhost";
     private static final int PORT = 8080;
     private static int CLIENTS = 50;
-    private static int REQUESTS_PER_CLIENT = 100000;
+    private static int REQUESTS_PER_CLIENT = 1000;
     private static final AtomicInteger successfulRequests = new AtomicInteger(0);
     private static final AtomicInteger failedRequests = new AtomicInteger(0);
     private static final AtomicLong latency = new AtomicLong(0);

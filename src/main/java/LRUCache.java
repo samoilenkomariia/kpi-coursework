@@ -1,6 +1,6 @@
 import java.util.Arrays;
 
-public class LRUCache<K,V> {
+public class LRUCache<K,V> implements ILRUCache<K,V> {
     private final LRUCacheSegment<K,V>[] segments;
     private final int segmentMask;
 
