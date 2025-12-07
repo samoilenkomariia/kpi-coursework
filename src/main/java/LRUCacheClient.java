@@ -28,11 +28,11 @@ public class LRUCacheClient {
         runTest(clients, reqs, port);
     }
 
-    public static void runTest(int port) {
-        runTest(CLIENTS, REQUESTS_PER_CLIENT, port);
+    public static String runTest(int port) {
+        return runTest(CLIENTS, REQUESTS_PER_CLIENT, port);
     }
 
-    public static void runTest(int clients, int requests, int port) {
+    public static String runTest(int clients, int requests, int port) {
         if (clients <= 0 || requests <= 0) {
             throw new IllegalArgumentException("Number of clients and requests must be positive");
         }
@@ -57,15 +57,15 @@ public class LRUCacheClient {
             throw new RuntimeException(e);
         }
         long end = System.nanoTime();
-        printStatistics(start, end, clients, requests);
+        return printStatistics(start, end, clients, requests);
     }
 
-    private static void printStatistics(long startTime, long endTime, int clientCount, int requestCount) {
+    private static String printStatistics(long startTime, long endTime, int clientCount, int requestCount) {
         double time = (endTime - startTime)/1_000_000_000.0;
         int totalRequests = successfulRequests.get() + failedRequests.get();
         double throughputS = (double) totalRequests / time;
         double latencyMs = (double) latency.get() / totalRequests / 1_000_000.0;
-        System.out.printf("""
+        return String.format("""
                 Threads %d, requests per thread %d
                 Total requests %d
                 Successful requests %d

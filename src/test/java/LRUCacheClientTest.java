@@ -1,6 +1,4 @@
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -53,13 +51,17 @@ public class LRUCacheClientTest {
     static void stopServer() {
         LRUCacheService.stop();
     }
+    @BeforeEach
+    void init(TestInfo testInfo) {
+        System.out.println();
+        System.out.printf("STARTING TEST: %s%n", testInfo.getDisplayName());
+    }
 
     @Test
     void test10Client100ReqsRunningSuccessfully() {
         assertDoesNotThrow(() -> {
             LRUCacheClient.runTest(10, 100, PORT);
         }, "Client failed with execution during sanity test for 10 clients & 100 reqs");
-        System.out.println();
     }
 
     @Test
@@ -67,7 +69,6 @@ public class LRUCacheClientTest {
         assertDoesNotThrow(() -> {
             LRUCacheClient.runTest(PORT); // 50 clients, 1000 requests
         }, "Client failed with execution during sanity test for default initial parameters");
-        System.out.println();
     }
 
     @Test
@@ -75,6 +76,5 @@ public class LRUCacheClientTest {
         assertDoesNotThrow(() -> {
             LRUCacheClient.runTest(50, 10000, PORT);
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
-        System.out.println();
     }
 }
