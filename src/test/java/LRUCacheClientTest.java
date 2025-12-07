@@ -7,13 +7,16 @@ import java.net.Socket;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/*
+    Smoke test: assert correct work of service & client
+ */
+
 public class LRUCacheClientTest {
-    private static Thread server;
     private static int PORT = 0;
 
     @BeforeAll
     static void startServer() {
-        server = new Thread(() -> {
+        Thread server = new Thread(() -> {
             try {
                 LRUCacheService.startService(1000, 512, PORT);
             } catch (IOException e) {

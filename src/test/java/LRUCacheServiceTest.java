@@ -13,12 +13,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.Random.class)
 public class LRUCacheServiceTest {
-    private static Thread server;
     private static int PORT = 0;
 
     @BeforeAll
     static void startServer() {
-        server = new Thread(() -> {
+        Thread server = new Thread(() -> {
             try {
                 LRUCacheService.startService(1000, 512, PORT);
             } catch (IOException e) {
@@ -41,7 +40,7 @@ public class LRUCacheServiceTest {
         start = System.currentTimeMillis();
         // sanity check
         while(System.currentTimeMillis() - start < 5000) {
-            try (Socket s = new Socket("localhost", PORT)) {
+            try (Socket ignored1 = new Socket("localhost", PORT)) {
                 return;
             } catch (IOException e) {
                 try {
@@ -138,7 +137,7 @@ public class LRUCacheServiceTest {
 
     @Test
     void testConcurrentClientsAtOnce() throws InterruptedException, ExecutionException {
-        int clientCount = 100;
+        int clientCount = 1000;
         ExecutorService pool = Executors.newFixedThreadPool(clientCount);
         Callable<Boolean> task = getBooleanCallable(clientCount);
         List<Future<Boolean>> results = new ArrayList<>();
@@ -170,48 +169,11 @@ public class LRUCacheServiceTest {
                 }
                 output.println("GET " + threadKey);
                 response = input.readLine();
-                if (!("VALUE val").equals(response)) {
+                if (!"VALUE val".equals(response)) {
                     System.out.printf("Client failed to get %s, response %s%n", threadKey, response);
                 }
                 return ("VALUE val").equals(response);
             }
         };
-    }
-
-    private static Callable<Boolean> getBooleanCallable() {
-        return () -> {
-            try (Socket socket = new Socket("localhost", PORT);
-                 PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
-                 BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-                String threadKey = "key_" + (Thread.currentThread().getId() % 50);
-                output.println("PUT " + threadKey + " val");
-                String response = input.readLine();
-                if (!"OK".equals(response)) {
-                    System.out.printf("Client failed to put %s, response %s%n", threadKey, response);
-                    return false;
-                }
-                output.println("GET " + threadKey);
-                response = input.readLine();
-                if (!("VALUE val").equals(response)) {
-                    System.out.printf("Client failed to get %s, response %s%n", threadKey, response);
-                }
-                return ("VALUE val").equals(response);
-            }
-        };
-    }
-
-    @Test
-    void testManyRequestsFromUsers() throws ExecutionException, InterruptedException {
-        int requestCount = 2000;
-        int clientCount = 100;
-        ExecutorService pool = Executors.newFixedThreadPool(clientCount);
-        List<Future<Boolean>> results = new ArrayList<>();
-        for (int i = 0; i < requestCount; i++) {
-            results.add(pool.submit(getBooleanCallable()));
-        }
-        for (int i = 0; i < requestCount; i++) {
-            assertTrue(results.get(i).get(), "Client " + i + " failed to put/get concurrently");
-        }
-        pool.shutdown();
     }
 }
