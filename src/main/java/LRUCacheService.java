@@ -10,25 +10,55 @@ import java.util.concurrent.Executors;
 public class LRUCacheService {
     private static LRUCache<String,String> cache;
     private static final int PORT = 8080;
-    private static int threadPoolSize = 50;
+    private static final int threadPoolSize = 50;
+    private static volatile ServerSocket serverSocket;
 
     public static void main(String[] args) throws IOException {
         int capacity = 100;
         int concurrencyLevel = 16;
-        if (args.length > 0) {
-            capacity = Integer.parseInt(args[0]);
-            concurrencyLevel = Integer.parseInt(args[1]);
-        }
-        cache = new LRUCache<>(capacity, concurrencyLevel);
+        int port = PORT;
+        if (args.length > 0) capacity = Integer.parseInt(args[0]);
+        if (args.length > 1) concurrencyLevel = Integer.parseInt(args[1]);
+        if (args.length > 2) port = Integer.parseInt(args[2]);
+        startService(capacity, concurrencyLevel, port);
+    }
+
+    public static void startService(int cap, int concLevel, int port) throws IOException {
+        cache = new LRUCache<>(cap, concLevel);
         ExecutorService threadPool = Executors.newFixedThreadPool(threadPoolSize);
 
-        try (ServerSocket socket = new ServerSocket(PORT)) {
-            System.out.println("Starting LRU Cache service on port " + PORT);
-            while (true) {
-                Socket clientSocket = socket.accept();
-                threadPool.submit(new ClientHandler(clientSocket));
+        try (ServerSocket socket = new ServerSocket(port)) {
+            serverSocket = socket;
+            port = socket.getLocalPort(); // when requested port = 0, then it will be random available port given by os
+            System.out.println("Starting LRU Cache service on port " + port);
+
+            while (!socket.isClosed()) {
+                try {
+                    Socket clientSocket = socket.accept();
+                    threadPool.submit(new ClientHandler(clientSocket));
+                } catch (IOException e) {
+                    if (socket.isClosed()) {
+                        threadPool.shutdown();
+                        System.out.printf("Server is closed on port %d%n", port);
+                        break;
+                    }
+                    e.printStackTrace();
+                }
             }
         }
+    }
+
+    public static void stop() {
+        try {
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static int getPort() {
+        return serverSocket != null && !serverSocket.isClosed() ? serverSocket.getLocalPort() : 0;
     }
 
     private static class ClientHandler implements Runnable {
