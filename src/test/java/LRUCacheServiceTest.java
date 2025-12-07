@@ -1,7 +1,4 @@
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.*;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,22 +13,34 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.Random.class)
 public class LRUCacheServiceTest {
-
-    private static final int PORT = 8080;
+    private static Thread server;
+    private static int PORT = 0;
 
     @BeforeAll
     static void startServer() {
-        Thread thread = new Thread(() -> {
+        server = new Thread(() -> {
             try {
-                LRUCacheService.main(new String[]{});
+                LRUCacheService.startService(1000, 512, PORT);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         });
-        thread.setDaemon(true);
-        thread.start();
+        server.setDaemon(true);
+        server.start();
         long start = System.currentTimeMillis();
-        while (System.currentTimeMillis() - start < 5000) {
+        while (LRUCacheService.getPort() == 0) {
+            if (System.currentTimeMillis() - start > 5000) {
+                throw new RuntimeException("Server did bind port within 5 seconds");
+            }
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException ignored) {}
+        }
+        PORT = LRUCacheService.getPort();
+        System.out.println("LRUCacheService started on port " + PORT);
+        start = System.currentTimeMillis();
+        // sanity check
+        while(System.currentTimeMillis() - start < 5000) {
             try (Socket s = new Socket("localhost", PORT)) {
                 return;
             } catch (IOException e) {
@@ -42,10 +51,14 @@ public class LRUCacheServiceTest {
         }
         throw new RuntimeException("Server did not start within 5 seconds");
     }
+    @AfterAll
+    static void stopServer() {
+        LRUCacheService.stop();
+    }
 
     @Test
     void testPutAndGet() {
-        try (Socket socket = new Socket("localhost", 8080);
+        try (Socket socket = new Socket("localhost", PORT);
              PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
             writer.println("put key-testPutAndGet value-1");
@@ -61,7 +74,7 @@ public class LRUCacheServiceTest {
 
     @Test
     void testMalformedPutCommand() {
-        try (Socket socket = new Socket("localhost", 8080);
+        try (Socket socket = new Socket("localhost", PORT);
              PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
             writer.println("put key-testMalformedCommands");
@@ -80,7 +93,7 @@ public class LRUCacheServiceTest {
 
     @Test
     void testMalformedGetCommand() {
-        try (Socket socket = new Socket("localhost", 8080);
+        try (Socket socket = new Socket("localhost", PORT);
              PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
             writer.println("get");
@@ -96,7 +109,7 @@ public class LRUCacheServiceTest {
 
     @Test
     void testEmptyGetCommand() {
-        try (Socket socket = new Socket("localhost", 8080);
+        try (Socket socket = new Socket("localhost", PORT);
              PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
             writer.println("get key-testEmptyGetCommand");
@@ -109,7 +122,7 @@ public class LRUCacheServiceTest {
 
     @Test
     void testUnknownCommands() {
-        try (Socket socket = new Socket("localhost", 8080);
+        try (Socket socket = new Socket("localhost", PORT);
              PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
             writer.println("gte key");
