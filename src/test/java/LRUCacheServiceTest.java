@@ -135,6 +135,7 @@ public class LRUCacheServiceTest {
         }
     }
 
+    // verify correctness of service work & responces
     @Test
     void testConcurrentClientsAtOnce() throws InterruptedException, ExecutionException {
         int clientCount = 1000;
