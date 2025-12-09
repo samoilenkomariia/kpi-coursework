@@ -115,16 +115,16 @@ public class LRUCacheTest {
 
     @Test
     void benchmarkShardingVsSingleLock() throws InterruptedException {
-        int operations = 20000000;
-        int threads = 100;
+        int operations = 10000000;
+        int threads = 1000;
 
         System.out.println("Benchmark sharding vs single lock");
         for (int i = 0; i < 5; i++) {
-            LRUCacheSegment<Integer, Integer> singleLockCache = new LRUCacheSegment<>(1000);
+            LRUCache<Integer, Integer> singleLockCache = new LRUCache<>(1000, 1);
             long timeSingle = runBenchmark(singleLockCache, threads, operations);
             System.out.println("Single lock Cache time(ms): " + timeSingle);
 
-            LRUCache<Integer, Integer> shardedCache = new LRUCache<>(1000, 512);
+            LRUCache<Integer, Integer> shardedCache = new LRUCache<>(1000, 524);
             long timeSharded = runBenchmark(shardedCache, threads, operations);
             System.out.println("Sharded Cache time(ms): " + timeSharded);
             System.out.printf("Speedup: %.2fx%n", (double) timeSingle / timeSharded);

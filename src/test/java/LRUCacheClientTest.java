@@ -8,7 +8,7 @@ import java.net.Socket;
 import static org.junit.jupiter.api.Assertions.*;
 
 /*
-    Smoke test: assert correct work of service & client
+    E2E test: assert correct work of service & client
  */
 
 public class LRUCacheClientTest {

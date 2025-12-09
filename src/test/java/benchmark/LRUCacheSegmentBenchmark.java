@@ -1,6 +1,7 @@
 package benchmark;
 
 import com.mylrucachelib.LRUCache;
+import com.mylrucachelib.LRUCacheSegment;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -14,15 +15,15 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 5, time = 1)
 @Fork(1)
 @Threads(32)
-public class LRUCacheBenchmark {
-    private LRUCache<String, String> cache;
+public class LRUCacheSegmentBenchmark {
+    private LRUCacheSegment<String, String> cache;
 
     @Param({"100", "10000", "1000000"})
     private int capacity;
 
     @Setup
     public void setup() {
-        cache = new LRUCache<>(capacity, 16);
+        cache = new LRUCacheSegment<>(capacity);
         for (int i = 0; i < capacity; i++) {
             cache.put("key" + i, "value" + i);
         }
