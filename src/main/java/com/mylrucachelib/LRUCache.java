@@ -1,8 +1,14 @@
+package com.mylrucachelib;
+
 import java.util.Arrays;
 
 public class LRUCache<K,V> implements ILRUCache<K,V> {
     private final LRUCacheSegment<K,V>[] segments;
     private final int segmentMask;
+
+    public LRUCache(int capacity, double concurrencyFactor) {
+        this(capacity, (int) (concurrencyFactor*capacity));
+    }
 
     public LRUCache(int capacity, int concurrencyLevel) {
         if (concurrencyLevel <= 0) {

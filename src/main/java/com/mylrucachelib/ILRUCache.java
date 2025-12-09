@@ -1,3 +1,5 @@
+package com.mylrucachelib;
+
 public interface ILRUCache<K,V> {
 
     void put(K key, V value);

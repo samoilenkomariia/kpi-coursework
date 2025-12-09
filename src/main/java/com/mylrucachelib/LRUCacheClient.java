@@ -1,3 +1,5 @@
+package com.mylrucachelib;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -39,7 +41,7 @@ public class LRUCacheClient {
         successfulRequests.set(0);
         failedRequests.set(0);
         latency.set(0);
-        System.out.printf("Starting LRUCacheClient targeting %s:%d (Clients: %d, Reqs: %d)%n",
+        System.out.printf("Starting com.mylrucachelib.LRUCacheClient targeting %s:%d (Clients: %d, Reqs: %d)%n",
                 HOST, port, clients, requests);
         ExecutorService pool = Executors.newFixedThreadPool(clients);
         List<Future<?>> tasks = new ArrayList<>();
@@ -70,9 +72,9 @@ public class LRUCacheClient {
                 Total requests %d
                 Successful requests %d
                 Failed requests %d
-                Total time %f s
+                Total time %fs
                 Throughput %f req/s
-                Average latency %f ms
+                Average latency %fms
                 """, clientCount, requestCount, totalRequests,
                 successfulRequests.get(), failedRequests.get(), time,
                 throughputS, latencyMs);
