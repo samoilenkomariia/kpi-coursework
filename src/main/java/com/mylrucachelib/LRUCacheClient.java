@@ -27,14 +27,14 @@ public class LRUCacheClient {
         if (args.length > 0) port = Integer.parseInt(args[0]);
         if (args.length > 1) clients = Integer.parseInt(args[1]);
         if (args.length > 2) reqs = Integer.parseInt(args[2]);
-        runTest(clients, reqs, port);
+        System.out.println(runTest(clients, reqs, port));
     }
 
-    public static String runTest(int port) {
+    public static Stats runTest(int port) {
         return runTest(CLIENTS, REQUESTS_PER_CLIENT, port);
     }
 
-    public static String runTest(int clients, int requests, int port) {
+    public static Stats runTest(int clients, int requests, int port) {
         if (clients <= 0 || requests <= 0) {
             throw new IllegalArgumentException("Number of clients and requests must be positive");
         }
@@ -59,23 +59,15 @@ public class LRUCacheClient {
             throw new RuntimeException(e);
         }
         long end = System.nanoTime();
-        return printStatistics(start, end, clients, requests);
+        return getStatistics(start, end, clients, requests);
     }
 
-    private static String printStatistics(long startTime, long endTime, int clientCount, int requestCount) {
+    private static Stats getStatistics(long startTime, long endTime, int clientCount, int requestCount) {
         double time = (endTime - startTime)/1_000_000_000.0;
         int totalRequests = successfulRequests.get() + failedRequests.get();
         double throughputS = (double) totalRequests / time;
         double latencyMs = (double) latency.get() / totalRequests / 1_000_000.0;
-        return String.format("""
-                Threads %d, requests per thread %d
-                Total requests %d
-                Successful requests %d
-                Failed requests %d
-                Total time %fs
-                Throughput %f req/s
-                Average latency %fms
-                """, clientCount, requestCount, totalRequests,
+        return new Stats(clientCount, requestCount, totalRequests,
                 successfulRequests.get(), failedRequests.get(), time,
                 throughputS, latencyMs);
     }

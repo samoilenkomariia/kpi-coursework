@@ -6,10 +6,6 @@ public class LRUCache<K,V> implements ILRUCache<K,V> {
     private final LRUCacheSegment<K,V>[] segments;
     private final int segmentMask;
 
-    public LRUCache(int capacity, double concurrencyFactor) {
-        this(capacity, (int) (concurrencyFactor*capacity));
-    }
-
     public LRUCache(int capacity, int concurrencyLevel) {
         if (concurrencyLevel <= 0) {
             throw new IllegalArgumentException("Illegal initial concurrency level: " + concurrencyLevel);
