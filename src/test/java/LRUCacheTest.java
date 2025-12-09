@@ -119,13 +119,15 @@ public class LRUCacheTest {
         int threads = 100;
 
         System.out.println("Benchmark sharding vs single lock");
-        LRUCacheSegment<Integer,Integer> singleLockCache = new LRUCacheSegment<>(1000);
-        long timeSingle = runBenchmark(singleLockCache, threads, operations);
-        System.out.println("Single lock Cache time(ms): " + timeSingle);
+        for (int i = 0; i < 5; i++) {
+            LRUCacheSegment<Integer, Integer> singleLockCache = new LRUCacheSegment<>(1000);
+            long timeSingle = runBenchmark(singleLockCache, threads, operations);
+            System.out.println("Single lock Cache time(ms): " + timeSingle);
 
-        LRUCache<Integer,Integer> shardedCache = new LRUCache<>(1000, 512);
-        long timeSharded = runBenchmark(shardedCache, threads, operations);
-        System.out.println("Sharded Cache time(ms): " + timeSharded);
-        System.out.printf("Speedup: %.2fx%n", (double)timeSingle / timeSharded);
+            LRUCache<Integer, Integer> shardedCache = new LRUCache<>(1000, 512);
+            long timeSharded = runBenchmark(shardedCache, threads, operations);
+            System.out.println("Sharded Cache time(ms): " + timeSharded);
+            System.out.printf("Speedup: %.2fx%n", (double) timeSingle / timeSharded);
+        }
     }
 }

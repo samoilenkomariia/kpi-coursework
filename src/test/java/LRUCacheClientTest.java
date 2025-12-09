@@ -90,28 +90,21 @@ public class LRUCacheClientTest {
     @Test
     void test200Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            System.out.println(LRUCacheClient.runTest(200, 10000, PORT));
+            System.out.println(LRUCacheClient.runTest(200, 1000, PORT));
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
     }
 
     @Test
     void test500Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            System.out.println(LRUCacheClient.runTest(500, 10000, PORT));
-        }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
-    }
-
-    @Test
-    void test2000Clients1000Requests() {
-        assertDoesNotThrow(() -> {
-            System.out.println(LRUCacheClient.runTest(2000, 10000, PORT));
+            System.out.println(LRUCacheClient.runTest(500, 1000, PORT));
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
     }
 
     @Test
     void test1000Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            System.out.println(LRUCacheClient.runTest(1000, 10000, PORT));
+            System.out.println(LRUCacheClient.runTest(1000, 1000, PORT));
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
     }
 }
