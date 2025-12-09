@@ -1,3 +1,4 @@
+import com.mylrucachelib.LRUCacheService;
 import org.junit.jupiter.api.*;
 
 import java.io.BufferedReader;
@@ -36,7 +37,7 @@ public class LRUCacheServiceTest {
             } catch (InterruptedException ignored) {}
         }
         PORT = LRUCacheService.getPort();
-        System.out.println("LRUCacheService started on port " + PORT);
+        System.out.println("com.mylrucachelib.LRUCacheService started on port " + PORT);
         start = System.currentTimeMillis();
         // sanity check
         while(System.currentTimeMillis() - start < 5000) {
@@ -135,7 +136,7 @@ public class LRUCacheServiceTest {
         }
     }
 
-    // verify correctness of service work & responces
+    // verify correctness of service work & responses concurrently
     @Test
     void testConcurrentClientsAtOnce() throws InterruptedException, ExecutionException {
         int clientCount = 1000;

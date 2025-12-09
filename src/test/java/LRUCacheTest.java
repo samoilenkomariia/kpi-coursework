@@ -1,3 +1,6 @@
+import com.mylrucachelib.ILRUCache;
+import com.mylrucachelib.LRUCache;
+import com.mylrucachelib.LRUCacheSegment;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CountDownLatch;

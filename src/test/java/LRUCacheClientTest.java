@@ -1,3 +1,5 @@
+import com.mylrucachelib.LRUCacheClient;
+import com.mylrucachelib.LRUCacheService;
 import org.junit.jupiter.api.*;
 
 import java.io.IOException;
@@ -16,7 +18,7 @@ public class LRUCacheClientTest {
     static void startServer() {
         Thread server = new Thread(() -> {
             try {
-                LRUCacheService.startService(1000, 512, PORT);
+                LRUCacheService.startService(10, 8, PORT);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -33,7 +35,7 @@ public class LRUCacheClientTest {
             } catch (InterruptedException ignored) {}
         }
         PORT = LRUCacheService.getPort();
-        System.out.println("LRUCacheService started on port " + PORT);
+        System.out.println("com.mylrucachelib.LRUCacheService started on port " + PORT);
         start = System.currentTimeMillis();
         // sanity check
         while(System.currentTimeMillis() - start < 5000) {
@@ -60,21 +62,56 @@ public class LRUCacheClientTest {
     @Test
     void test10Client100ReqsRunningSuccessfully() {
         assertDoesNotThrow(() -> {
-            LRUCacheClient.runTest(10, 100, PORT);
+            System.out.println(LRUCacheClient.runTest(10, 100, PORT));
         }, "Client failed with execution during sanity test for 10 clients & 100 reqs");
     }
 
     @Test
     void testDefaultClientRequests() {
         assertDoesNotThrow(() -> {
-            LRUCacheClient.runTest(PORT); // 50 clients, 1000 requests
+            System.out.println(LRUCacheClient.runTest(PORT)); // 50 clients, 1000 requests
         }, "Client failed with execution during sanity test for default initial parameters");
     }
 
     @Test
     void test50Clients10000Requests() {
         assertDoesNotThrow(() -> {
-            LRUCacheClient.runTest(50, 10000, PORT);
+            System.out.println(LRUCacheClient.runTest(50, 10000, PORT));
+        }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
+    }
+
+    @Test
+    void test100Clients1000Requests() {
+        assertDoesNotThrow(() -> {
+            System.out.println(LRUCacheClient.runTest(100, 1000, PORT));
+        }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
+    }
+
+    @Test
+    void test200Clients1000Requests() {
+        assertDoesNotThrow(() -> {
+            System.out.println(LRUCacheClient.runTest(200, 10000, PORT));
+        }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
+    }
+
+    @Test
+    void test500Clients1000Requests() {
+        assertDoesNotThrow(() -> {
+            System.out.println(LRUCacheClient.runTest(500, 10000, PORT));
+        }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
+    }
+
+    @Test
+    void test2000Clients1000Requests() {
+        assertDoesNotThrow(() -> {
+            System.out.println(LRUCacheClient.runTest(2000, 10000, PORT));
+        }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
+    }
+
+    @Test
+    void test1000Clients1000Requests() {
+        assertDoesNotThrow(() -> {
+            System.out.println(LRUCacheClient.runTest(1000, 10000, PORT));
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
     }
 }

@@ -1,3 +1,4 @@
+import com.mylrucachelib.LRUCacheSegment;
 import net.jqwik.api.*;
 import net.jqwik.api.stateful.Action;
 import net.jqwik.api.stateful.ActionSequence;
