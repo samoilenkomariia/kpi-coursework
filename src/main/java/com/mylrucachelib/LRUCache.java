@@ -2,7 +2,7 @@ package com.mylrucachelib;
 
 import java.util.Arrays;
 
-public class LRUCache<K,V> implements ILRUCache<K,V> {
+public class LRUCache<K,V> {
     private final LRUCacheSegment<K,V>[] segments;
     private final int segmentMask;
 

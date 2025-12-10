@@ -1,6 +1,4 @@
-import com.mylrucachelib.ILRUCache;
 import com.mylrucachelib.LRUCache;
-import com.mylrucachelib.LRUCacheSegment;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CountDownLatch;
@@ -88,46 +86,5 @@ public class LRUCacheTest {
         assertFalse(failed.get(), "Exception(s) occurred during thread execution");
         int actualSize = cache.size();
         assertTrue(actualSize <= capacity, "Cache size must not exceed set capacity %d, actual %d".formatted(capacity, actualSize));
-    }
-
-    private long runBenchmark(ILRUCache<Integer,Integer> cache, int nThreads, int nOperations) throws InterruptedException {
-        ExecutorService pool = Executors.newFixedThreadPool(nThreads);
-        int opPerThread = nOperations / nThreads;
-        CountDownLatch latch = new CountDownLatch(nThreads);
-        long start = System.currentTimeMillis();
-        for (int i = 0; i < nThreads; i++) {
-            pool.submit(() -> {
-                try {
-                    for(int j = 0; j < opPerThread; j++) {
-                        cache.put(j, j);
-                        cache.get(j);
-                    }
-                } finally {
-                    latch.countDown();
-                }
-            });
-        }
-        latch.await();
-        long end = System.currentTimeMillis();
-        pool.shutdown();
-        return end - start;
-    }
-
-    @Test
-    void benchmarkShardingVsSingleLock() throws InterruptedException {
-        int operations = 10000000;
-        int threads = 1000;
-
-        System.out.println("Benchmark sharding vs single lock");
-        for (int i = 0; i < 5; i++) {
-            LRUCache<Integer, Integer> singleLockCache = new LRUCache<>(1000, 1);
-            long timeSingle = runBenchmark(singleLockCache, threads, operations);
-            System.out.println("Single lock Cache time(ms): " + timeSingle);
-
-            LRUCache<Integer, Integer> shardedCache = new LRUCache<>(1000, 524);
-            long timeSharded = runBenchmark(shardedCache, threads, operations);
-            System.out.println("Sharded Cache time(ms): " + timeSharded);
-            System.out.printf("Speedup: %.2fx%n", (double) timeSingle / timeSharded);
-        }
     }
 }

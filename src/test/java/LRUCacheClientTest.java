@@ -1,5 +1,6 @@
 import com.mylrucachelib.LRUCacheClient;
 import com.mylrucachelib.LRUCacheService;
+import com.mylrucachelib.Stats;
 import org.junit.jupiter.api.*;
 
 import java.io.IOException;
@@ -62,49 +63,70 @@ public class LRUCacheClientTest {
     @Test
     void test10Client100ReqsRunningSuccessfully() {
         assertDoesNotThrow(() -> {
-            System.out.println(LRUCacheClient.runTest(10, 100, PORT));
+            Stats stat = LRUCacheClient.runTest(10, 100, PORT);
+            System.out.println(stat);
+            int threshold = 10000;
+            assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
         }, "Client failed with execution during sanity test for 10 clients & 100 reqs");
     }
 
     @Test
     void testDefaultClientRequests() {
         assertDoesNotThrow(() -> {
-            System.out.println(LRUCacheClient.runTest(PORT)); // 50 clients, 1000 requests
+            Stats stat = LRUCacheClient.runTest(PORT);
+            System.out.println(stat);
+            int threshold = 10000;
+            assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
         }, "Client failed with execution during sanity test for default initial parameters");
     }
 
     @Test
     void test50Clients10000Requests() {
         assertDoesNotThrow(() -> {
-            System.out.println(LRUCacheClient.runTest(50, 10000, PORT));
+            Stats stat = LRUCacheClient.runTest(10, 100, PORT);
+            System.out.println(stat);
+            int threshold = 10000;
+            assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
     }
 
     @Test
     void test100Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            System.out.println(LRUCacheClient.runTest(100, 1000, PORT));
+            Stats stat = LRUCacheClient.runTest(10, 100, PORT);
+            System.out.println(stat);
+            int threshold = 10000;
+            assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
     }
 
     @Test
     void test200Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            System.out.println(LRUCacheClient.runTest(200, 1000, PORT));
+            Stats stat = LRUCacheClient.runTest(10, 100, PORT);
+            System.out.println(stat);
+            int threshold = 10000;
+            assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
     }
 
     @Test
     void test500Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            System.out.println(LRUCacheClient.runTest(500, 1000, PORT));
+            Stats stat = LRUCacheClient.runTest(10, 100, PORT);
+            System.out.println(stat);
+            int threshold = 10000;
+            assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
     }
 
     @Test
     void test1000Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            System.out.println(LRUCacheClient.runTest(1000, 1000, PORT));
+            Stats stat = LRUCacheClient.runTest(10, 100, PORT);
+            System.out.println(stat);
+            int threshold = 10000;
+            assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
     }
 }

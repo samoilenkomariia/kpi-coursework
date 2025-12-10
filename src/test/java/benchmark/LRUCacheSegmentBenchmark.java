@@ -1,6 +1,5 @@
 package benchmark;
 
-import com.mylrucachelib.LRUCache;
 import com.mylrucachelib.LRUCacheSegment;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
