@@ -189,7 +189,6 @@ public class LRUCacheServiceTest {
              PrintWriter badWriter = new PrintWriter(badSocket.getOutputStream(), true)) {
             badWriter.print("PUT key-broken ");
             badWriter.flush();
-            badSocket.close();
         } catch (IOException e) {
             fail("Failed to connect bad client");
         }
