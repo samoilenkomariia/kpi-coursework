@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
@@ -20,9 +21,10 @@ public class LRUCacheServiceTest {
     static void startServer() {
         Thread server = new Thread(() -> {
             try {
-                LRUCacheService.startService(1000, 16, PORT);
+                LRUCacheService.startService(100, 16, PORT);
             } catch (IOException e) {
                 e.printStackTrace();
+                throw new RuntimeException(e);
             }
         });
         server.setDaemon(true);
@@ -138,44 +140,69 @@ public class LRUCacheServiceTest {
 
     // verify correctness of service work & responses concurrently
     @Test
-    void testConcurrentClientsAtOnce() throws InterruptedException, ExecutionException {
+    void testConcurrentClientsAtOnce() {
         int clientCount = 1000;
+
         ExecutorService pool = Executors.newFixedThreadPool(clientCount);
-        Callable<Boolean> task = getBooleanCallable(clientCount);
-        List<Future<Boolean>> results = new ArrayList<>();
+        List<Future<?>> futures = new ArrayList<>();
+        CountDownLatch latch = new CountDownLatch(clientCount);
         for (int i = 0; i < clientCount; i++) {
-            results.add(pool.submit(task));
+            futures.add(pool.submit(() -> {
+                try (Socket socket = new Socket("localhost", PORT);
+                     PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
+                     BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+                    latch.countDown();
+                    latch.await();
+
+                    String threadKey = "keyService-" + (Thread.currentThread().getId() % 50);
+                    output.println("PUT " + threadKey + " val" + threadKey);
+                    String expected = "OK";
+                    String response = input.readLine();
+                    if (!expected.equals(response)) {
+                        fail(String.format("Client failed to put %s, expected %s, but got response %s%n", threadKey, expected, response));
+                    }
+                    output.println("GET " + threadKey);
+                    response = input.readLine();
+                    expected = "VALUE val"  + threadKey;
+                    if (!expected.equals(response)) {
+                        fail(String.format("Client failed to get %s, expected %s, but got %s%n", threadKey, expected, response));
+                    }
+
+                } catch (IOException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }));
         }
-        for (int i = 0; i < clientCount; i++) {
-            assertTrue(results.get(i).get(), "Client " + i + " failed to put/get concurrently");
+        for (var future : futures) {
+            try {
+                future.get();
+            } catch (InterruptedException | ExecutionException e) {
+                fail("Thread failed " + e.getMessage());
+            }
         }
         pool.shutdown();
     }
 
-    private static Callable<Boolean> getBooleanCallable(int clientCount) {
-        CountDownLatch latch = new CountDownLatch(clientCount);
+    @Test
+    void testAbruptDisconnect() {
+        try (Socket badSocket = new Socket("localhost", PORT);
+             PrintWriter badWriter = new PrintWriter(badSocket.getOutputStream(), true)) {
+            badWriter.print("PUT key-broken ");
+            badWriter.flush();
+            badSocket.close();
+        } catch (IOException e) {
+            fail("Failed to connect bad client");
+        }
 
-        return () -> {
-            try (Socket socket = new Socket("localhost", PORT);
-                 PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
-                 BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-                latch.countDown();
-                latch.await();
+        assertDoesNotThrow(() -> {
+            try (Socket goodSocket = new Socket("localhost", PORT);
+                 PrintWriter goodWriter = new PrintWriter(goodSocket.getOutputStream(), true);
+                 BufferedReader goodReader = new BufferedReader(new InputStreamReader(goodSocket.getInputStream()))) {
 
-                String threadKey = "key-" + (Thread.currentThread().getId() % 50);
-                output.println("PUT " + threadKey + " val");
-                String response = input.readLine();
-                if (!"OK".equals(response)) {
-                    System.out.printf("Client failed to put %s, response %s%n", threadKey, response);
-                    return false;
-                }
-                output.println("GET " + threadKey);
-                response = input.readLine();
-                if (!"VALUE val".equals(response)) {
-                    System.out.printf("Client failed to get %s, response %s%n", threadKey, response);
-                }
-                return ("VALUE val").equals(response);
+                goodWriter.println("PUT key-alive value-alive");
+                String response = goodReader.readLine();
+                assertEquals("OK", response, "Server failed to recover from abrupt disconnect");
             }
-        };
+        });
     }
 }
