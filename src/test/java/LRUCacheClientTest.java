@@ -9,7 +9,7 @@ import java.net.Socket;
 import static org.junit.jupiter.api.Assertions.*;
 
 /*
-    E2E test: assert correct work of service & client
+    E2E test: load tests, stress test
  */
 
 public class LRUCacheClientTest {
@@ -19,7 +19,7 @@ public class LRUCacheClientTest {
     static void startServer() {
         Thread server = new Thread(() -> {
             try {
-                LRUCacheService.startService(10, 8, PORT);
+                LRUCacheService.startService(10, 4, PORT);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -59,10 +59,11 @@ public class LRUCacheClientTest {
         System.out.printf("%nStarting test: %s%n", testInfo.getDisplayName());
     }
 
+    // Throughput + successful requests testing
     @Test
     void test10Client100ReqsRunningSuccessfully() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(10, 100, PORT);
+            Stats stat = LRUCacheClient.runTest(10, 100, PORT, 10);
             System.out.println(stat);
             int threshold = 100;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
@@ -73,7 +74,7 @@ public class LRUCacheClientTest {
     @Test
     void test50Clients10000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(50, 10000, PORT);
+            Stats stat = LRUCacheClient.runTest(50, 10000, PORT, 50);
             System.out.println(stat);
             int threshold = 50000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
@@ -95,7 +96,7 @@ public class LRUCacheClientTest {
     @Test
     void test100Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(100, 1000, PORT);
+            Stats stat = LRUCacheClient.runTest(100, 1000, PORT, 100);
             System.out.println(stat);
             int threshold = 10000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
@@ -106,7 +107,7 @@ public class LRUCacheClientTest {
     @Test
     void test200Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(200, 1000, PORT);
+            Stats stat = LRUCacheClient.runTest(200, 1000, PORT, 200);
             System.out.println(stat);
             int threshold = 20000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
@@ -117,7 +118,7 @@ public class LRUCacheClientTest {
     @Test
     void test500Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(500, 1000, PORT);
+            Stats stat = LRUCacheClient.runTest(500, 1000, PORT, 500);
             System.out.println(stat);
             int threshold = 50000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
@@ -128,11 +129,30 @@ public class LRUCacheClientTest {
     @Test
     void test1000Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(1000, 1000, PORT);
+            Stats stat = LRUCacheClient.runTest(1000, 1000, PORT, 1000);
             System.out.println(stat);
             int threshold = 100000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
             assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
+    }
+
+    // rivalry for 5 key by 100 clients
+    @Test
+    void testHotKeyContention100clients1000Requests() {
+        assertDoesNotThrow(() -> {
+            Stats stat = LRUCacheClient.runTest(100, 1000, PORT, 5);
+            System.out.println("Hot Key Stats: \n" + stat);
+            assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
+        });
+    }
+
+    @Test
+    void testHotKeyContention200clients1000Requests() {
+        assertDoesNotThrow(() -> {
+            Stats stat = LRUCacheClient.runTest(200, 1000, PORT, 5);
+            System.out.println("Hot Key Stats: \n" + stat);
+            assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
+        });
     }
 }
