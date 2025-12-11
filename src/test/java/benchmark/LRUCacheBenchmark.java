@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.SECONDS)
 @Warmup(iterations = 3, time = 1)
 @Measurement(iterations = 5, time = 1)
-@Fork(1)
+@Fork(3)
 @Threads(32)
 public class LRUCacheBenchmark {
     private LRUCache<String, String> cache;

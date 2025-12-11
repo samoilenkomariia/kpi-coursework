@@ -51,7 +51,6 @@ public class LRUCacheTest {
         }
         System.out.print("testing concurrency lvl == capacity " + cache);
         assertEquals(5, cache.size(), "expected size 5, got %d".formatted( cache.size()));
-
     }
 
     @Test

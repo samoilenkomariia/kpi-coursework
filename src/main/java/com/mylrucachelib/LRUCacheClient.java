@@ -46,7 +46,7 @@ public class LRUCacheClient {
         ExecutorService pool = Executors.newFixedThreadPool(clients);
         long start = System.nanoTime();
         for (int i = 1; i <= clients; i++) {
-            pool.submit(new Client(i, port, requests));
+            pool.submit(new Client(i, port, requests, clients));
         }
         pool.shutdown();
         try {
@@ -75,21 +75,24 @@ public class LRUCacheClient {
         private final int id;
         private final int targertPort;
         private final int requests;
+        private final int keyRange;
 
-        public Client(int id, int targertPort, int requestCount) {
+        public Client(int id, int targertPort, int requestCount, int keyRange) {
             this.id = id;
             this.targertPort = targertPort;
             this.requests = requestCount;
+            this.keyRange = keyRange;
         }
 
         private boolean performRequest(PrintWriter output, BufferedReader input) throws IOException {
-            if (Math.random() < WRITE_PROBABILITY) {
-                String command = "put key" + this.id + " data" + this.id;
+            int randomKey = ThreadLocalRandom.current().nextInt(keyRange);
+            if (ThreadLocalRandom.current().nextDouble(1.0) < WRITE_PROBABILITY) {
+                String command = "put key" + randomKey + " data" + this.id;
                 output.println(command);
                 String response = input.readLine();
                 return response != null && response.equals("OK");
             } else {
-                String key = "key" + this.id;
+                String key = "key" + randomKey;
                 String command = "get " + key;
                 output.println(command);
                 String response = input.readLine();
