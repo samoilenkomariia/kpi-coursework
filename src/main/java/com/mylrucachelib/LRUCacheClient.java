@@ -24,17 +24,19 @@ public class LRUCacheClient {
         int port = 8080;
         int clients = CLIENTS;
         int reqs = REQUESTS_PER_CLIENT;
+        int keyRange = CLIENTS;
         if (args.length > 0) port = Integer.parseInt(args[0]);
         if (args.length > 1) clients = Integer.parseInt(args[1]);
         if (args.length > 2) reqs = Integer.parseInt(args[2]);
-        System.out.println(runTest(clients, reqs, port));
+        if (args.length > 3) keyRange = Integer.parseInt(args[3]);
+        System.out.println(runTest(clients, reqs, port, keyRange));
     }
 
     public static Stats runTest(int port) {
-        return runTest(CLIENTS, REQUESTS_PER_CLIENT, port);
+        return runTest(CLIENTS, REQUESTS_PER_CLIENT, port, CLIENTS);
     }
 
-    public static Stats runTest(int clients, int requests, int port) {
+    public static Stats runTest(int clients, int requests, int port, int keyRange) {
         if (clients <= 0 || requests <= 0) {
             throw new IllegalArgumentException("Number of clients and requests must be positive");
         }
@@ -85,7 +87,7 @@ public class LRUCacheClient {
         }
 
         private boolean performRequest(PrintWriter output, BufferedReader input) throws IOException {
-            int randomKey = ThreadLocalRandom.current().nextInt(keyRange);
+            int randomKey = id > keyRange ? ThreadLocalRandom.current().nextInt(keyRange) : id;
             if (ThreadLocalRandom.current().nextDouble(1.0) < WRITE_PROBABILITY) {
                 String command = "put key" + randomKey + " data" + this.id;
                 output.println(command);
