@@ -20,7 +20,7 @@ public class LRUCacheServiceTest {
     static void startServer() {
         Thread server = new Thread(() -> {
             try {
-                LRUCacheService.startService(1000, 512, PORT);
+                LRUCacheService.startService(1000, 16, PORT);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -37,7 +37,7 @@ public class LRUCacheServiceTest {
             } catch (InterruptedException ignored) {}
         }
         PORT = LRUCacheService.getPort();
-        System.out.println("com.mylrucachelib.LRUCacheService started on port " + PORT);
+        System.out.println("LRUCacheService started on port " + PORT);
         start = System.currentTimeMillis();
         // sanity check
         while(System.currentTimeMillis() - start < 5000) {

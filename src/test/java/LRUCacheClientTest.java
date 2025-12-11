@@ -56,8 +56,7 @@ public class LRUCacheClientTest {
     }
     @BeforeEach
     void init(TestInfo testInfo) {
-        System.out.println();
-        System.out.printf("STARTING TEST: %s%n", testInfo.getDisplayName());
+        System.out.printf("%nStarting test: %s%n", testInfo.getDisplayName());
     }
 
     @Test
@@ -65,68 +64,75 @@ public class LRUCacheClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = LRUCacheClient.runTest(10, 100, PORT);
             System.out.println(stat);
-            int threshold = 10000;
+            int threshold = 100;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
+            assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
         }, "Client failed with execution during sanity test for 10 clients & 100 reqs");
     }
 
     @Test
     void testDefaultClientRequests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(PORT);
+            Stats stat = LRUCacheClient.runTest(PORT); // 50 threads, 1000 reqs per thread
             System.out.println(stat);
             int threshold = 10000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
+            assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
         }, "Client failed with execution during sanity test for default initial parameters");
     }
 
     @Test
     void test50Clients10000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(10, 100, PORT);
+            Stats stat = LRUCacheClient.runTest(50, 10000, PORT);
             System.out.println(stat);
-            int threshold = 10000;
+            int threshold = 50000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
+            assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
     }
 
     @Test
     void test100Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(10, 100, PORT);
+            Stats stat = LRUCacheClient.runTest(100, 1000, PORT);
             System.out.println(stat);
             int threshold = 10000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
+            assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
     }
 
     @Test
     void test200Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(10, 100, PORT);
+            Stats stat = LRUCacheClient.runTest(200, 1000, PORT);
             System.out.println(stat);
-            int threshold = 10000;
+            int threshold = 20000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
+            assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
     }
 
     @Test
     void test500Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(10, 100, PORT);
+            Stats stat = LRUCacheClient.runTest(500, 1000, PORT);
             System.out.println(stat);
-            int threshold = 10000;
+            int threshold = 50000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
+            assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
     }
 
     @Test
     void test1000Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(10, 100, PORT);
+            Stats stat = LRUCacheClient.runTest(1000, 1000, PORT);
             System.out.println(stat);
-            int threshold = 10000;
+            int threshold = 100000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
+            assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
         }, "Client failed with execution during sanity test for 50 clients & 10000 reqs");
     }
 }

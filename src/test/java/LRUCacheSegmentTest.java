@@ -3,11 +3,27 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/*
+    Unit testing
+ */
+
 public class LRUCacheSegmentTest {
 
     @Test
     void testZeroCapacity() {
         assertThrows(IllegalArgumentException.class, () -> new LRUCacheSegment<>(0));
+    }
+
+    @Test
+    void testOneCapacity() {
+        LRUCacheSegment<Character,Character> cache = new LRUCacheSegment<>(1);
+        for (char a = 'A'; a <= 'G'; a++) {
+            cache.put(a, a);
+        }
+        System.out.println("testing capacity=1 " + cache);
+        int size = cache.size();
+        assertEquals(1, size, "expected %d, got %d".formatted(1, size));
+        assertEquals('G', cache.get('G'), "expected G, got %s".formatted('G'));
     }
 
     @Test
@@ -49,21 +65,27 @@ public class LRUCacheSegmentTest {
         cache.put('A', null);
         System.out.println("testing put null value " + cache);
         int size = cache.size();
-        assertEquals(2, size, "expected cache size %d, but got %d".formatted(2, size));
+        int expected = 2;
+        assertEquals(expected, size, "expected cache size %d, but got %d".formatted(expected, size));
         assertNull(cache.get('K'));
         assertNull(cache.get('A'));
     }
 
     @Test
-    void testOneCapacity() {
-        LRUCacheSegment<Character,Character> cache = new LRUCacheSegment<>(1);
-        for (char a = 'A'; a <= 'G'; a++) {
+    void putUpdateNullKey() {
+        LRUCacheSegment<Character,Character> cache = new LRUCacheSegment<>(3);
+        for (char a = 'A'; a < 'C'; a++) {
             cache.put(a, a);
         }
-        System.out.println("testing capacity=1 " + cache);
+        cache.put(null, 'D');
+        System.out.println("testing put null key " + cache);
         int size = cache.size();
-        assertEquals(1, size, "expected %d, got %d".formatted(1, size));
-        assertEquals('G', cache.get('G'), "expected 'G, got %s".formatted('G'));
+        int expected = 3;
+        assertEquals(expected, size, "expected cache size %d, but got %d".formatted(expected, size));
+        assertEquals('D', cache.get(null));
+        cache.put(null, 'E');
+        System.out.println("testing update null key " + cache);
+        assertEquals('E', cache.get(null));
     }
 
     @Test

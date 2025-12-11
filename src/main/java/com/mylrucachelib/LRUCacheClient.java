@@ -41,13 +41,12 @@ public class LRUCacheClient {
         successfulRequests.set(0);
         failedRequests.set(0);
         latency.set(0);
-        System.out.printf("Starting com.mylrucachelib.LRUCacheClient targeting %s:%d (Clients: %d, Reqs: %d)%n",
+        System.out.printf("Starting LRUCacheClient targeting %s:%d (Clients: %d, Reqs: %d)%n",
                 HOST, port, clients, requests);
         ExecutorService pool = Executors.newFixedThreadPool(clients);
-        List<Future<?>> tasks = new ArrayList<>();
         long start = System.nanoTime();
         for (int i = 1; i <= clients; i++) {
-            tasks.add(pool.submit(new Client(i, port, requests)));
+            pool.submit(new Client(i, port, requests));
         }
         pool.shutdown();
         try {
@@ -100,12 +99,13 @@ public class LRUCacheClient {
 
         @Override
         public void run() {
+            int i = 0;
             try (
                     Socket socket = new Socket(HOST, targertPort);
                     BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                     PrintWriter output = new PrintWriter(socket.getOutputStream(), true)
             ) {
-                for (int i = 0; i < requests; i++) {
+                for (i = 0; i < requests; i++) {
                     long opStartTime = System.nanoTime();
                     boolean success = performRequest(output, input);
                     long opEndTime = System.nanoTime();
@@ -114,7 +114,7 @@ public class LRUCacheClient {
                     else failedRequests.incrementAndGet();
                 }
             } catch (IOException e) {
-                failedRequests.addAndGet(requests);
+                failedRequests.addAndGet(requests - i);
             }
         }
     }
