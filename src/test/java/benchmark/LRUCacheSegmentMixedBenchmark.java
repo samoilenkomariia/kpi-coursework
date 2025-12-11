@@ -14,29 +14,27 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 5, time = 1)
 @Fork(3)
 @Threads(32)
-public class LRUCacheSegmentBenchmark {
+public class LRUCacheSegmentMixedBenchmark {
     private LRUCacheSegment<String, String> cache;
 
-    @Param({"100", "10000", "1000000"})
+    @Param({"10000"})
     private int capacity;
 
     @Setup
     public void setup() {
         cache = new LRUCacheSegment<>(capacity);
-        for (int i = 0; i < capacity; i++) {
-            cache.put("key" + i, "value" + i);
+        for (int i = 0; i < 16; i++) {
+            cache.put("key" + i, "val" + i);
         }
     }
 
     @Benchmark
-    public void testPut(Blackhole bh) {
-        int id = ThreadLocalRandom.current().nextInt(capacity*2);
-        cache.put("key" + id, "value" + id);
-    }
-
-    @Benchmark
-    public void testGet(Blackhole bh) {
+    public void test90Read10Write(Blackhole bh) {
         int id = ThreadLocalRandom.current().nextInt(capacity);
-        bh.consume(cache.get("key" + id));
+        if (ThreadLocalRandom.current().nextDouble() < 0.1) {
+            cache.put("key" + id, "new-value-" + id);
+        } else {
+            bh.consume(cache.get("key" + id));
+        }
     }
 }
