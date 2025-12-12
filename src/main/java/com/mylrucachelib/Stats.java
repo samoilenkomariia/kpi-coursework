@@ -11,9 +11,12 @@ public record Stats (int threads, int reqsPerThread, int totalReqs, int successf
                 Failed requests %d
                 Total time %fs
                 Throughput %f req/s
-                Average latency %fms
-                """, threads, reqsPerThread, totalReqs,
+                Average latency %fms""", threads, reqsPerThread, totalReqs,
                 successfulReqs, failedReqs, totalTime,
                 throughput, avgLatency);
+    }
+
+    public String toCSV() {
+        return threads + "," + reqsPerThread + "," + throughput + "," + avgLatency;
     }
 }

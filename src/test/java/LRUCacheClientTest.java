@@ -67,6 +67,7 @@ public class LRUCacheClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = LRUCacheClient.runTest(10, 100, service.getPort(), 10);
             System.out.println(stat);
+            System.out.println(stat.toCSV());
             int threshold = 100;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
             assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
@@ -78,6 +79,7 @@ public class LRUCacheClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = LRUCacheClient.runTest(50, 10000, service.getPort(), 50);
             System.out.println(stat);
+            System.out.println(stat.toCSV());
             int threshold = 50000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
             assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
@@ -89,6 +91,7 @@ public class LRUCacheClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = LRUCacheClient.runTest(service.getPort()); // 50 threads, 1000 reqs per thread
             System.out.println(stat);
+            System.out.println(stat.toCSV());
             int threshold = 10000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
             assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
@@ -100,6 +103,7 @@ public class LRUCacheClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = LRUCacheClient.runTest(100, 1000, service.getPort(), 100);
             System.out.println(stat);
+            System.out.println(stat.toCSV());
             int threshold = 10000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
             assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
@@ -111,6 +115,7 @@ public class LRUCacheClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = LRUCacheClient.runTest(200, 1000, service.getPort(), 200);
             System.out.println(stat);
+            System.out.println(stat.toCSV());
             int threshold = 20000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
             assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
@@ -122,6 +127,7 @@ public class LRUCacheClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = LRUCacheClient.runTest(500, 1000, service.getPort(), 500);
             System.out.println(stat);
+            System.out.println(stat.toCSV());
             int threshold = 50000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
             assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
@@ -133,6 +139,7 @@ public class LRUCacheClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = LRUCacheClient.runTest(1000, 1000, service.getPort(), 1000);
             System.out.println(stat);
+            System.out.println(stat.toCSV());
             int threshold = 100000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
             assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
@@ -144,7 +151,8 @@ public class LRUCacheClientTest {
     void testHotKeyContention100clients1000Requests() {
         assertDoesNotThrow(() -> {
             Stats stat = LRUCacheClient.runTest(100, 1000, service.getPort(), 5);
-            System.out.println("Hot Key Stats: \n" + stat);
+            System.out.println(stat);
+            System.out.println(stat.toCSV());
             assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
         });
     }
@@ -153,7 +161,8 @@ public class LRUCacheClientTest {
     void testHotKeyContention200clients1000Requests() {
         assertDoesNotThrow(() -> {
             Stats stat = LRUCacheClient.runTest(200, 1000, service.getPort(), 5);
-            System.out.println("Hot Key Stats: \n" + stat);
+            System.out.println(stat);
+            System.out.println(stat.toCSV());
             assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
         });
     }
