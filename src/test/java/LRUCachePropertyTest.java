@@ -47,7 +47,7 @@ public class LRUCachePropertyTest {
     }
 
     @Property
-    void lruCacheShouldBehaveLikeLinkedHashMap(
+    void    lruCacheShouldBehaveLikeLinkedHashMap(
         @ForAll("sequences")ActionSequence<Model> sequence
     ) {
         sequence.run(new Model());

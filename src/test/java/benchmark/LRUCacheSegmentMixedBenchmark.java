@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 public class LRUCacheSegmentMixedBenchmark {
     private LRUCacheSegment<String, String> cache;
 
-    @Param({"10000"})
+    @Param({"100", "10000", "1000000"})
     private int capacity;
 
     @Setup
