@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -15,9 +13,9 @@ public class LRUCacheClient {
     private static final String HOST = "localhost";
     private static final int CLIENTS = 50;
     private static final int REQUESTS_PER_CLIENT = 1000;
-    private static final AtomicInteger successfulRequests = new AtomicInteger(0);
-    private static final AtomicInteger failedRequests = new AtomicInteger(0);
-    private static final AtomicLong latency = new AtomicLong(0);
+    private final AtomicInteger successfulRequests = new AtomicInteger(0);
+    private final AtomicInteger failedRequests = new AtomicInteger(0);
+    private final AtomicLong latency = new AtomicLong(0);
     private static final double WRITE_PROBABILITY = 0.3;
 
     public static void main(String[] args) {
@@ -29,26 +27,29 @@ public class LRUCacheClient {
         if (args.length > 1) clients = Integer.parseInt(args[1]);
         if (args.length > 2) reqs = Integer.parseInt(args[2]);
         if (args.length > 3) keyRange = Integer.parseInt(args[3]);
-        System.out.println(runTest(clients, reqs, port, keyRange));
+        LRUCacheClient client = new LRUCacheClient();
+        System.out.println(client.startTest(clients, reqs, port, keyRange));
+    }
+
+    public static Stats runTest(int clients, int requests, int port, int keyRange) {
+        return new LRUCacheClient().startTest(clients, requests, port, keyRange);
     }
 
     public static Stats runTest(int port) {
         return runTest(CLIENTS, REQUESTS_PER_CLIENT, port, CLIENTS);
     }
 
-    public static Stats runTest(int clients, int requests, int port, int keyRange) {
+    public Stats startTest(int clients, int requests, int port, int keyRange) {
         if (clients <= 0 || requests <= 0) {
-            throw new IllegalArgumentException("Number of clients and requests must be positive");
+            throw new IllegalArgumentException("Invalid arguments");
         }
-        successfulRequests.set(0);
-        failedRequests.set(0);
-        latency.set(0);
         System.out.printf("Starting LRUCacheClient targeting %s:%d (Clients: %d, Reqs: %d)%n",
                 HOST, port, clients, requests);
         ExecutorService pool = Executors.newFixedThreadPool(clients);
+
         long start = System.nanoTime();
         for (int i = 1; i <= clients; i++) {
-            pool.submit(new Client(i, port, requests, clients));
+            pool.submit(new Client(i, port, requests, keyRange, this));
         }
         pool.shutdown();
         try {
@@ -63,7 +64,7 @@ public class LRUCacheClient {
         return getStatistics(start, end, clients, requests);
     }
 
-    private static Stats getStatistics(long startTime, long endTime, int clientCount, int requestCount) {
+    private Stats getStatistics(long startTime, long endTime, int clientCount, int requestCount) {
         double time = (endTime - startTime)/1_000_000_000.0;
         int totalRequests = successfulRequests.get() + failedRequests.get();
         double throughputS = (double) totalRequests / time;
@@ -78,12 +79,14 @@ public class LRUCacheClient {
         private final int targertPort;
         private final int requests;
         private final int keyRange;
+        private final LRUCacheClient parent;
 
-        public Client(int id, int targertPort, int requestCount, int keyRange) {
+        public Client(int id, int targertPort, int requestCount, int keyRange, LRUCacheClient parent) {
             this.id = id;
             this.targertPort = targertPort;
             this.requests = requestCount;
             this.keyRange = keyRange;
+            this.parent = parent;
         }
 
         private boolean performRequest(PrintWriter output, BufferedReader input) throws IOException {
@@ -114,12 +117,12 @@ public class LRUCacheClient {
                     long opStartTime = System.nanoTime();
                     boolean success = performRequest(output, input);
                     long opEndTime = System.nanoTime();
-                    latency.addAndGet(opEndTime - opStartTime);
-                    if (success) successfulRequests.incrementAndGet();
-                    else failedRequests.incrementAndGet();
+                    parent.latency.addAndGet(opEndTime - opStartTime);
+                    if (success) parent.successfulRequests.incrementAndGet();
+                    else parent.failedRequests.incrementAndGet();
                 }
             } catch (IOException e) {
-                failedRequests.addAndGet(requests - i);
+                parent.failedRequests.addAndGet(requests - i);
             }
         }
     }
