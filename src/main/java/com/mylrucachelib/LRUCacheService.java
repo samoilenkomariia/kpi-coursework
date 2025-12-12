@@ -10,47 +10,51 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class LRUCacheService {
-    private static LRUCache<String,String> cache;
-    private static final int PORT = 8080;
-    private static final int threadPoolSize = 50;
-    private static volatile ServerSocket serverSocket;
+    private static final int DEFAULT_PORT = 8080;
+    private static final int THREAD_POOL_SIZE = 50;
+
+    private LRUCache<String,String> cache;
+    private ServerSocket serverSocket;
+    private ExecutorService threadPool;
 
     public static void main(String[] args) throws IOException {
         int capacity = 100;
         int concurrencyLevel = 16;
-        int port = PORT;
+        int port = DEFAULT_PORT;
         if (args.length > 0) capacity = Integer.parseInt(args[0]);
         if (args.length > 1) concurrencyLevel = Integer.parseInt(args[1]);
         if (args.length > 2) port = Integer.parseInt(args[2]);
-        startService(capacity, concurrencyLevel, port);
+        LRUCacheService service = new LRUCacheService();
+        service.start(capacity, concurrencyLevel, port);
     }
 
-    public static void startService(int cap, int concLevel, int port) throws IOException {
-        cache = new LRUCache<>(cap, concLevel);
-        ExecutorService threadPool = Executors.newFixedThreadPool(threadPoolSize);
+    public void start(int cap, int concLevel, int port) throws IOException {
+        this.cache = new LRUCache<>(cap, concLevel);
+        this.threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 
         try (ServerSocket socket = new ServerSocket(port)) {
-            serverSocket = socket;
-            port = socket.getLocalPort(); // when requested port = 0, then it will be random available port given by os
-            System.out.println("Starting LRU Cache service on port " + port);
+            this.serverSocket = socket;
+            port = socket.getLocalPort();
+            System.out.println("Starting LRU Cache service on port " + socket.getLocalPort());
 
             while (!socket.isClosed()) {
                 try {
                     Socket clientSocket = socket.accept();
-                    threadPool.submit(new ClientHandler(clientSocket));
+                    threadPool.submit(new ClientHandler(clientSocket, this.cache));
                 } catch (IOException e) {
                     if (socket.isClosed()) {
-                        threadPool.shutdown();
-                        System.out.printf("Server is closed on port %d%n", port);
+                        System.out.println("Server stopped on port " + port);
                         break;
                     }
                     e.printStackTrace();
                 }
             }
+        } finally {
+            if (threadPool != null) threadPool.shutdown();
         }
     }
 
-    public static void stop() {
+    public void stop() {
         try {
             if (serverSocket != null && !serverSocket.isClosed()) {
                 serverSocket.close();
@@ -59,15 +63,17 @@ public class LRUCacheService {
             e.printStackTrace();
         }
     }
-    public static int getPort() {
+    public int getPort() {
         return serverSocket != null && !serverSocket.isClosed() ? serverSocket.getLocalPort() : 0;
     }
 
     private static class ClientHandler implements Runnable {
         private final Socket socket;
+        private final LRUCache<String, String> cacheInstance;
 
-        public ClientHandler(Socket socket) {
+        public ClientHandler(Socket socket, LRUCache<String, String> cache) {
             this.socket = socket;
+            this.cacheInstance = cache;
         }
 
         @Override
@@ -106,7 +112,7 @@ public class LRUCacheService {
                         } else {
                             String key = parts[1];
                             String value = parts[2];
-                            cache.put(key, value);
+                            this.cacheInstance.put(key, value);
                             output.println("OK");
                         }
                     }
@@ -115,7 +121,7 @@ public class LRUCacheService {
                             output.println("ERROR_USAGE_GET");
                         } else {
                             String key = parts[1];
-                            String value = cache.get(key);
+                            String value = this.cacheInstance.get(key);
                             if (value == null) {
                                 output.println("NOT_FOUND");
                             } else {
