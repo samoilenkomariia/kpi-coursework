@@ -13,13 +13,17 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 
 public class LRUCacheClientTest {
-    private static int PORT = 0;
+    private static final int PORT = 0;
+    private static final int CAPACITY = 100;
+    private static final int CONC_LVL = 16;
+    private LRUCacheService service;
 
-    @BeforeAll
-    static void startServer() {
+    @BeforeEach
+    void startServer() {
+        service = new LRUCacheService();
         Thread server = new Thread(() -> {
             try {
-                LRUCacheService.startService(10, 4, PORT);
+                service.start(CAPACITY, CONC_LVL, PORT);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -27,20 +31,19 @@ public class LRUCacheClientTest {
         server.setDaemon(true);
         server.start();
         long start = System.currentTimeMillis();
-        while (LRUCacheService.getPort() == 0) {
+        while (service.getPort() == 0) {
             if (System.currentTimeMillis() - start > 5000) {
-                throw new RuntimeException("Server did bind port within 5 seconds");
+                throw new RuntimeException("Server did not bind port within 5 seconds");
             }
             try {
                 Thread.sleep(50);
             } catch (InterruptedException ignored) {}
         }
-        PORT = LRUCacheService.getPort();
-        System.out.println("com.mylrucachelib.LRUCacheService started on port " + PORT);
+        System.out.println("LRUCacheService started on port " + service.getPort());
         start = System.currentTimeMillis();
         // sanity check
         while(System.currentTimeMillis() - start < 5000) {
-            try (Socket s = new Socket("localhost", PORT)) {
+            try (Socket s = new Socket("localhost", service.getPort())) {
                 return;
             } catch (IOException e) {
                 try {
@@ -48,22 +51,21 @@ public class LRUCacheClientTest {
                 } catch (InterruptedException ignored) {}
             }
         }
-        throw new RuntimeException("Server did not start within 5 seconds");
+        throw new RuntimeException("Server did not pass sanity check");
     }
-    @AfterAll
-    static void stopServer() {
-        LRUCacheService.stop();
-    }
-    @BeforeEach
-    void init(TestInfo testInfo) {
-        System.out.printf("%nStarting test: %s%n", testInfo.getDisplayName());
+
+    @AfterEach
+    void stopServer() {
+        if (service != null) {
+            service.stop();
+        }
     }
 
     // Throughput + successful requests testing
     @Test
     void test10Client100ReqsRunningSuccessfully() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(10, 100, PORT, 10);
+            Stats stat = LRUCacheClient.runTest(10, 100, service.getPort(), 10);
             System.out.println(stat);
             int threshold = 100;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
@@ -74,7 +76,7 @@ public class LRUCacheClientTest {
     @Test
     void test50Clients10000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(50, 10000, PORT, 50);
+            Stats stat = LRUCacheClient.runTest(50, 10000, service.getPort(), 50);
             System.out.println(stat);
             int threshold = 50000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
@@ -85,7 +87,7 @@ public class LRUCacheClientTest {
     @Test
     void testDefaultClientRequests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(PORT); // 50 threads, 1000 reqs per thread
+            Stats stat = LRUCacheClient.runTest(service.getPort()); // 50 threads, 1000 reqs per thread
             System.out.println(stat);
             int threshold = 10000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
@@ -96,7 +98,7 @@ public class LRUCacheClientTest {
     @Test
     void test100Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(100, 1000, PORT, 100);
+            Stats stat = LRUCacheClient.runTest(100, 1000, service.getPort(), 100);
             System.out.println(stat);
             int threshold = 10000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
@@ -107,7 +109,7 @@ public class LRUCacheClientTest {
     @Test
     void test200Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(200, 1000, PORT, 200);
+            Stats stat = LRUCacheClient.runTest(200, 1000, service.getPort(), 200);
             System.out.println(stat);
             int threshold = 20000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
@@ -118,7 +120,7 @@ public class LRUCacheClientTest {
     @Test
     void test500Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(500, 1000, PORT, 500);
+            Stats stat = LRUCacheClient.runTest(500, 1000, service.getPort(), 500);
             System.out.println(stat);
             int threshold = 50000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
@@ -129,7 +131,7 @@ public class LRUCacheClientTest {
     @Test
     void test1000Clients1000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(1000, 1000, PORT, 1000);
+            Stats stat = LRUCacheClient.runTest(1000, 1000, service.getPort(), 1000);
             System.out.println(stat);
             int threshold = 100000;
             assertTrue(stat.throughput() > threshold, "Throughput is less than " + threshold);
@@ -141,7 +143,7 @@ public class LRUCacheClientTest {
     @Test
     void testHotKeyContention100clients1000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(100, 1000, PORT, 5);
+            Stats stat = LRUCacheClient.runTest(100, 1000, service.getPort(), 5);
             System.out.println("Hot Key Stats: \n" + stat);
             assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
         });
@@ -150,7 +152,7 @@ public class LRUCacheClientTest {
     @Test
     void testHotKeyContention200clients1000Requests() {
         assertDoesNotThrow(() -> {
-            Stats stat = LRUCacheClient.runTest(200, 1000, PORT, 5);
+            Stats stat = LRUCacheClient.runTest(200, 1000, service.getPort(), 5);
             System.out.println("Hot Key Stats: \n" + stat);
             assertEquals(stat.totalReqs(), stat.successfulReqs(), "expected successful reqs %d, but got %d".formatted(stat.totalReqs(), stat.successfulReqs()));
         });

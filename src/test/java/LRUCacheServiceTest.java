@@ -15,35 +15,37 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.Random.class)
 public class LRUCacheServiceTest {
-    private static int PORT = 0;
+    private static final int PORT = 0;
+    private static final int CAPACITY = 100;
+    private static final int CONC_LVL = 16;
+    private LRUCacheService service;
 
-    @BeforeAll
-    static void startServer() {
+    @BeforeEach
+    void startServer() {
+        service = new LRUCacheService();
         Thread server = new Thread(() -> {
             try {
-                LRUCacheService.startService(100, 16, PORT);
+                service.start(CAPACITY, CONC_LVL, PORT);
             } catch (IOException e) {
                 e.printStackTrace();
-                throw new RuntimeException(e);
             }
         });
         server.setDaemon(true);
         server.start();
         long start = System.currentTimeMillis();
-        while (LRUCacheService.getPort() == 0) {
+        while (service.getPort() == 0) {
             if (System.currentTimeMillis() - start > 5000) {
-                throw new RuntimeException("Server did bind port within 5 seconds");
+                throw new RuntimeException("Server did not bind port within 5 seconds");
             }
             try {
                 Thread.sleep(50);
             } catch (InterruptedException ignored) {}
         }
-        PORT = LRUCacheService.getPort();
-        System.out.println("LRUCacheService started on port " + PORT);
+        System.out.println("LRUCacheService started on port " + service.getPort());
         start = System.currentTimeMillis();
         // sanity check
         while(System.currentTimeMillis() - start < 5000) {
-            try (Socket ignored1 = new Socket("localhost", PORT)) {
+            try (Socket s = new Socket("localhost", service.getPort())) {
                 return;
             } catch (IOException e) {
                 try {
@@ -51,16 +53,19 @@ public class LRUCacheServiceTest {
                 } catch (InterruptedException ignored) {}
             }
         }
-        throw new RuntimeException("Server did not start within 5 seconds");
+        throw new RuntimeException("Server did not pass sanity check");
     }
-    @AfterAll
-    static void stopServer() {
-        LRUCacheService.stop();
+
+    @AfterEach
+    void stopServer() {
+        if (service != null) {
+            service.stop();
+        }
     }
 
     @Test
     void testPutAndGet() {
-        try (Socket socket = new Socket("localhost", PORT);
+        try (Socket socket = new Socket("localhost", service.getPort());
              PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
             writer.println("put key-testPutAndGet value-1");
@@ -76,7 +81,7 @@ public class LRUCacheServiceTest {
 
     @Test
     void testMalformedPutCommand() {
-        try (Socket socket = new Socket("localhost", PORT);
+        try (Socket socket = new Socket("localhost", service.getPort());
              PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
             writer.println("put key-testMalformedCommands");
@@ -95,7 +100,7 @@ public class LRUCacheServiceTest {
 
     @Test
     void testMalformedGetCommand() {
-        try (Socket socket = new Socket("localhost", PORT);
+        try (Socket socket = new Socket("localhost", service.getPort());
              PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
             writer.println("get");
@@ -111,7 +116,7 @@ public class LRUCacheServiceTest {
 
     @Test
     void testEmptyGetCommand() {
-        try (Socket socket = new Socket("localhost", PORT);
+        try (Socket socket = new Socket("localhost", service.getPort());
              PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
             writer.println("get key-testEmptyGetCommand");
@@ -124,7 +129,7 @@ public class LRUCacheServiceTest {
 
     @Test
     void testUnknownCommands() {
-        try (Socket socket = new Socket("localhost", PORT);
+        try (Socket socket = new Socket("localhost", service.getPort());
              PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
             writer.println("gte key");
@@ -148,7 +153,7 @@ public class LRUCacheServiceTest {
         CountDownLatch latch = new CountDownLatch(clientCount);
         for (int i = 0; i < clientCount; i++) {
             futures.add(pool.submit(() -> {
-                try (Socket socket = new Socket("localhost", PORT);
+                try (Socket socket = new Socket("localhost", service.getPort());
                      PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
                      BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
                     latch.countDown();
@@ -185,7 +190,7 @@ public class LRUCacheServiceTest {
 
     @Test
     void testAbruptDisconnect() {
-        try (Socket badSocket = new Socket("localhost", PORT);
+        try (Socket badSocket = new Socket("localhost", service.getPort());
              PrintWriter badWriter = new PrintWriter(badSocket.getOutputStream(), true)) {
             badWriter.print("PUT key-broken ");
             badWriter.flush();
@@ -194,7 +199,7 @@ public class LRUCacheServiceTest {
         }
 
         assertDoesNotThrow(() -> {
-            try (Socket goodSocket = new Socket("localhost", PORT);
+            try (Socket goodSocket = new Socket("localhost", service.getPort());
                  PrintWriter goodWriter = new PrintWriter(goodSocket.getOutputStream(), true);
                  BufferedReader goodReader = new BufferedReader(new InputStreamReader(goodSocket.getInputStream()))) {
 
