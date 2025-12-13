@@ -59,6 +59,13 @@ public class LRUCache<K,V> {
         return size;
     }
 
+    public boolean checkSizeInvariance() {
+        for (var s : segments) {
+            if (!s.checkSizeInvariance()) return false;
+        }
+        return true;
+    }
+
     @Override
     public String toString() {
         return Arrays.toString(segments);

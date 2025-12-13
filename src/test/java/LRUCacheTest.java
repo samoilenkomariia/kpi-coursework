@@ -1,9 +1,14 @@
 import com.mylrucachelib.LRUCache;
+import net.jqwik.time.api.constraints.TimeRange;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -85,5 +90,6 @@ public class LRUCacheTest {
         assertFalse(failed.get(), "Exception(s) occurred during thread execution");
         int actualSize = cache.size();
         assertTrue(actualSize <= capacity, "Cache size must not exceed set capacity %d, actual %d".formatted(capacity, actualSize));
+        Assertions.assertTimeoutPreemptively(Duration.ofSeconds(5), () -> assertTrue(cache.checkSizeInvariance(), "Cache did not pass size invariance verification"), "The invariance check went into infinite loop which means it did not pass");
     }
 }

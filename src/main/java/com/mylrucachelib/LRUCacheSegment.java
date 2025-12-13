@@ -16,7 +16,7 @@ public class LRUCacheSegment<K,V> {
 
     private static class Node<K,V> {
         final K key;
-        volatile V value;
+        V value;
         Node<K,V> prev;
         Node<K,V> next;
         Node(K key, V value) {
@@ -114,6 +114,20 @@ public class LRUCacheSegment<K,V> {
         lock.lock();
         try {
             return map.size();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public boolean checkSizeInvariance() {
+        lock.lock();
+        try {
+            int count = 0;
+            Node<K,V> current = this.head;
+            while ((current = current.next) != this.tail) {
+                count++;
+            }
+            return map.size() == count;
         } finally {
             lock.unlock();
         }
