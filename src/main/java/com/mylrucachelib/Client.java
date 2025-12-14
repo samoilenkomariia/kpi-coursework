@@ -5,11 +5,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class LRUCacheClient {
+public class Client {
     private static final String HOST = "localhost";
     private static final int CLIENTS = 50;
     private static final int REQUESTS_PER_CLIENT = 1000;
@@ -27,29 +29,41 @@ public class LRUCacheClient {
         if (args.length > 1) clients = Integer.parseInt(args[1]);
         if (args.length > 2) reqs = Integer.parseInt(args[2]);
         if (args.length > 3) keyRange = Integer.parseInt(args[3]);
-        LRUCacheClient client = new LRUCacheClient();
+        com.mylrucachelib.Client client = new com.mylrucachelib.Client();
         System.out.println(client.startTest(clients, reqs, port, keyRange));
     }
 
     public static Stats runTest(int clients, int requests, int port, int keyRange) {
-        return new LRUCacheClient().startTest(clients, requests, port, keyRange);
+        return new com.mylrucachelib.Client().startTest(clients, requests, port, keyRange);
     }
 
     public static Stats runTest(int port) {
         return runTest(CLIENTS, REQUESTS_PER_CLIENT, port, CLIENTS);
     }
 
+    private List<String> generateCommands(int keyRange) {
+        List<String> commands = new ArrayList<>();
+        for (int i = 0; i < keyRange; i++) {
+            if (Math.random() < WRITE_PROBABILITY) {
+                commands.add("put " + i + " value");
+            } else {
+                commands.add("get " + i);
+            }
+        }
+        return commands;
+    }
+
     public Stats startTest(int clients, int requests, int port, int keyRange) {
         if (clients <= 0 || requests <= 0) {
             throw new IllegalArgumentException("Invalid arguments");
         }
+        List<String> commands = generateCommands(keyRange);
         System.out.printf("Starting LRUCacheClient targeting %s:%d (Clients: %d, Reqs: %d)%n",
                 HOST, port, clients, requests);
         ExecutorService pool = Executors.newFixedThreadPool(clients);
-
         long start = System.nanoTime();
         for (int i = 1; i <= clients; i++) {
-            pool.submit(new Client(i, port, requests, keyRange, this));
+            pool.submit(new ClientWorker(port, requests, keyRange, commands, this));
         }
         pool.shutdown();
         try {
@@ -74,55 +88,59 @@ public class LRUCacheClient {
                 throughputS, latencyMs);
     }
 
-    private static class Client implements Runnable {
-        private final int id;
-        private final int targertPort;
+    private static class ClientWorker implements Runnable {
+        private final int targetPort;
         private final int requests;
         private final int keyRange;
-        private final LRUCacheClient parent;
+        private final List<String> commands;
+        private final com.mylrucachelib.Client parent;
+        private int successCount = 0;
+        private int failedCount = 0;
+        private long latency = 0L;
 
-        public Client(int id, int targertPort, int requestCount, int keyRange, LRUCacheClient parent) {
-            this.id = id;
-            this.targertPort = targertPort;
+        public ClientWorker(int targetPort, int requestCount, int keyRange, List<String> commands, com.mylrucachelib.Client parent) {
+            this.targetPort = targetPort;
             this.requests = requestCount;
+            this.commands = commands;
             this.keyRange = keyRange;
             this.parent = parent;
         }
 
-        private boolean performRequest(PrintWriter output, BufferedReader input) throws IOException {
-            int randomKey = id > keyRange ? ThreadLocalRandom.current().nextInt(keyRange) : id;
-            if (ThreadLocalRandom.current().nextDouble(1.0) < WRITE_PROBABILITY) {
-                String command = "put key" + randomKey + " data" + this.id;
-                output.println(command);
-                String response = input.readLine();
-                return response != null && response.equals("OK");
-            } else {
-                String key = "key" + randomKey;
-                String command = "get " + key;
-                output.println(command);
-                String response = input.readLine();
-                return response != null && (response.contains("VALUE") || response.contains("NOT_FOUND"));
+        private boolean performRequest(PrintWriter output, BufferedReader input, int index) throws IOException {
+            String command = this.commands.get(index);
+            output.println(command);
+            String response = input.readLine();
+            if (response == null) return false;
+            String[] validResponses = {"OK", "VALUE", "NOT_FOUND"};
+            for (var r : validResponses) {
+                if (response.contains(r)) return true;
             }
+            return false;
         }
 
         @Override
         public void run() {
             int i = 0;
             try (
-                    Socket socket = new Socket(HOST, targertPort);
+                    Socket socket = new Socket(HOST, targetPort);
                     BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                     PrintWriter output = new PrintWriter(socket.getOutputStream(), true)
             ) {
                 for (i = 0; i < requests; i++) {
+                    int index = i % keyRange;
                     long opStartTime = System.nanoTime();
-                    boolean success = performRequest(output, input);
+                    boolean success = performRequest(output, input, index);
                     long opEndTime = System.nanoTime();
-                    parent.latency.addAndGet(opEndTime - opStartTime);
-                    if (success) parent.successfulRequests.incrementAndGet();
-                    else parent.failedRequests.incrementAndGet();
+                    this.latency += opEndTime - opStartTime;
+                    if (success) this.successCount++;
+                    else this.failedCount++;
                 }
             } catch (IOException e) {
-                parent.failedRequests.addAndGet(requests - i);
+                this.failedCount -= i;
+            } finally {
+                parent.latency.addAndGet(this.latency);
+                parent.successfulRequests.addAndGet(this.successCount);
+                parent.failedRequests.addAndGet(this.failedCount);
             }
         }
     }
