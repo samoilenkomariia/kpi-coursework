@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 @Fork(3)
 @Threads(64)
 public class LRUCacheBenchmark {
-    private LRUCache<String, String> cache;
+    private LRUCache<Integer, Integer> cache;
 
     @Param({"100", "10000", "1000000"})
     private int capacity;
@@ -24,20 +24,20 @@ public class LRUCacheBenchmark {
     public void setup() {
         cache = new LRUCache<>(capacity, 16);
         for (int i = 0; i < capacity; i++) {
-            cache.put("key" + i, "value" + i);
+            cache.put(i, i);
         }
     }
 
     @Benchmark
     public void testPut(Blackhole bh) {
         int id = ThreadLocalRandom.current().nextInt(capacity*2);
-        cache.put("key" + id, "value" + id);
+        cache.put(id, id);
     }
 
     @Benchmark
     public void testGet(Blackhole bh) {
         int id = ThreadLocalRandom.current().nextInt(capacity);
-        bh.consume(cache.get("key" + id));
+        bh.consume(cache.get(id));
     }
 
     public static void main(String[] args) throws Exception {

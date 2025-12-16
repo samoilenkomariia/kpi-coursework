@@ -9,7 +9,7 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class LRUCacheService {
+public class ThreadedServer {
     private static final int DEFAULT_PORT = 8080;
     private static final int THREAD_POOL_SIZE = 50;
 
@@ -24,7 +24,7 @@ public class LRUCacheService {
         if (args.length > 0) capacity = Integer.parseInt(args[0]);
         if (args.length > 1) concurrencyLevel = Integer.parseInt(args[1]);
         if (args.length > 2) port = Integer.parseInt(args[2]);
-        LRUCacheService service = new LRUCacheService();
+        ThreadedServer service = new ThreadedServer();
         service.start(capacity, concurrencyLevel, port);
     }
 

@@ -1,4 +1,4 @@
-import com.mylrucachelib.LRUCacheService;
+import com.mylrucachelib.ThreadedServer;
 import org.junit.jupiter.api.*;
 
 import java.io.BufferedReader;
@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
@@ -14,15 +13,15 @@ import java.util.concurrent.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.Random.class)
-public class LRUCacheServiceTest {
+public class ThreadedServerTest {
     private static final int PORT = 0;
     private static final int CAPACITY = 100;
     private static final int CONC_LVL = 16;
-    private LRUCacheService service;
+    private ThreadedServer service;
 
     @BeforeEach
     void startServer() {
-        service = new LRUCacheService();
+        service = new ThreadedServer();
         Thread server = new Thread(() -> {
             try {
                 service.start(CAPACITY, CONC_LVL, PORT);

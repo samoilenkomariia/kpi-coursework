@@ -1,5 +1,5 @@
 import com.mylrucachelib.Client;
-import com.mylrucachelib.LRUCacheService;
+import com.mylrucachelib.ThreadedServer;
 import com.mylrucachelib.Stats;
 import org.junit.jupiter.api.*;
 
@@ -16,11 +16,11 @@ public class ClientTest {
     private static final int PORT = 0;
     private static final int CAPACITY = 100;
     private static final int CONC_LVL = 16;
-    private LRUCacheService service;
+    private ThreadedServer service;
 
     @BeforeEach
     void startServer() {
-        service = new LRUCacheService();
+        service = new ThreadedServer();
         Thread server = new Thread(() -> {
             try {
                 service.start(CAPACITY, CONC_LVL, PORT);
