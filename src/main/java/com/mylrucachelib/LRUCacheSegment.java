@@ -1,9 +1,6 @@
 package com.mylrucachelib;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -13,15 +10,25 @@ public class LRUCacheSegment<K,V> {
     private final Node<K,V> head; // mru
     private final Node<K,V> tail; // lru
     private final Lock lock = new ReentrantLock();
+    private final TimeSource clock;
 
-    private static class Node<K,V> {
+    private class Node<K,V> {
         final K key;
         V value;
         Node<K,V> prev;
         Node<K,V> next;
+        long expireAtMs;
         Node(K key, V value) {
+            this(key, value, 0);
+        }
+        Node(K key, V value, long expireAtMs) {
             this.key = key;
             this.value = value;
+            this.expireAtMs = expireAtMs;
+        }
+
+        boolean isExpired() {
+            return expireAtMs != 0 && clock.currentTimeMillis() > expireAtMs;
         }
 
         @Override
@@ -31,6 +38,11 @@ public class LRUCacheSegment<K,V> {
     }
 
     public LRUCacheSegment(int capacity) {
+        this(capacity, System::currentTimeMillis);
+    }
+
+    public LRUCacheSegment(int capacity, TimeSource clock) {
+        this.clock = clock;
         if (capacity <= 0) {
             throw new IllegalArgumentException("Illegal capacity: " + capacity);
         }
@@ -90,24 +102,31 @@ public class LRUCacheSegment<K,V> {
         map.remove(lruNode.key);
     }
 
-    public void put(K key, V value) {
+    public void put(K key, V value, long ttlMs) {
         lock.lock();
         try {
+            long now = clock.currentTimeMillis();
+            long expiry = (ttlMs <= 0) ? 0 : now + ttlMs;
             if (map.containsKey(key)) {
                 Node<K,V> node = map.get(key);
                 node.value = value;
+                node.expireAtMs = expiry;
                 moveToHead(node); // mru
             } else {
                 if (map.size() >= capacity) {
                     evictLRU();
                 }
-                Node<K,V> newNode = new Node<>(key, value);
+                Node<K,V> newNode = new Node<>(key, value, expiry);
                 map.put(key, newNode);
                 addToHead(newNode); // mru
             }
         } finally {
             lock.unlock();
         }
+    }
+
+    public void put (K key, V value) {
+        put(key, value, 0);
     }
 
     public int size() {
@@ -131,5 +150,26 @@ public class LRUCacheSegment<K,V> {
         } finally {
             lock.unlock();
         }
+    }
+
+    public int cleanupExpired(int sampleSize) {
+        lock.lock();
+        int removed = 0;
+        try {
+            Iterator<Node<K,V>> iter = map.values().iterator();
+            int checked = 0;
+            while (iter.hasNext() && checked < sampleSize) {
+                Node<K, V> node = iter.next();
+                if (node.isExpired()) {
+                    removeNode(node);
+                    iter.remove();
+                    removed++;
+                }
+                checked++;
+            }
+        } finally {
+            lock.unlock();
+        }
+        return removed;
     }
 }

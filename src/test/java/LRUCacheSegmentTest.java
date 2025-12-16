@@ -1,5 +1,9 @@
 import com.mylrucachelib.LRUCacheSegment;
+import com.mylrucachelib.TimeSource;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -112,5 +116,25 @@ public class LRUCacheSegmentTest {
         assertEquals('Z', actual, "expected Z, got %s".formatted(actual));
         int updatedSize = cache.size();
         assertEquals(size, updatedSize, "Cache size should not have changed, expected %d, got %d".formatted(size, updatedSize));
+    }
+
+    @Test
+    void testTTL() {
+        AtomicLong fakeTime = new AtomicLong(100000);
+        TimeSource mockClock = fakeTime::get;
+        LRUCacheSegment<Integer,Integer> cache = new LRUCacheSegment<>(50, mockClock);
+        for (int i = 0; i <= 50; i++) {
+            cache.put(i, i, 1000);
+        }
+        int removed = cache.cleanupExpired(10);
+        assertEquals(0, removed);
+
+        fakeTime.addAndGet(500);
+        removed = cache.cleanupExpired(10);
+        assertEquals(0, removed);
+
+        fakeTime.addAndGet(1001);
+        removed = cache.cleanupExpired(50);
+        assertEquals(50, removed);
     }
 }
