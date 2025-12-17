@@ -10,31 +10,37 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class AsyncSimulator implements Runnable {
+public class AsyncSimulator implements Callable<Stats> {
     private static final String HOST = "localhost";
     private final int port;
     private final int clientCount;
+    private int activeClients;
     private final AtomicInteger successfulRequests = new AtomicInteger(0);
     private final AtomicInteger failedRequests = new AtomicInteger(0);
     private final AtomicLong latency = new AtomicLong(0);
+    private int reqsPerClient = 1000;
     private Selector selector;
     private final List<List<String>> allClientCommands;
 
     public AsyncSimulator(int port, int clientCount, int requestsPerClient, int keyRange) {
         this.port = port;
         this.clientCount = clientCount;
+        this.activeClients = clientCount;
+        this.reqsPerClient = requestsPerClient;
         this.allClientCommands = new java.util.ArrayList<>();
         for(int i = 0; i < clientCount; i++) {
             allClientCommands.add(generateCommands(requestsPerClient, keyRange));
         }
     }
+
     static class ClientState {
-        ByteBuffer writeBuffer = ByteBuffer.allocate(1024);
-        ByteBuffer readBuffer = ByteBuffer.allocate(1024);
+        ByteBuffer writeBuffer = ByteBuffer.allocate(4096);
+        ByteBuffer readBuffer = ByteBuffer.allocate(4096);
         List<String> commands;
         int currentRequestIndex = 0;
         long opStartTime;
@@ -47,7 +53,7 @@ public class AsyncSimulator implements Runnable {
     }
 
     @Override
-    public void run() {
+    public Stats call() {
         try {
             selector = Selector.open();
             for (int i = 0; i < clientCount; i++) {
@@ -57,8 +63,8 @@ public class AsyncSimulator implements Runnable {
                 ClientState state = new ClientState(allClientCommands.get(i));
                 channel.register(selector, SelectionKey.OP_CONNECT, state);
             }
-
-            while (!Thread.currentThread().isInterrupted()) {
+            long start = System.nanoTime();
+            while (!Thread.currentThread().isInterrupted() && activeClients > 0) {
                 int readyChannels = selector.select();
                 if (readyChannels == 0) continue;
 
@@ -69,18 +75,32 @@ public class AsyncSimulator implements Runnable {
                     if (!key.isValid()) continue;
                     if (key.isConnectable()) {
                         handleConnect(key);
-                    } else if (key.isWritable()) {
+                    } else if (key.isValid() && key.isWritable()) {
                         handleWrite(key);
-                    } else if (key.isReadable()) {
+                    } else if (key.isValid() && key.isReadable()) {
                         handleRead(key);
                     }
                     if (selector.keys().isEmpty()) break;
                 }
             }
+            long end = System.nanoTime();
+            return getStatistics(start, end, clientCount, reqsPerClient);
         } catch (IOException e) {
             e.printStackTrace();
+            return null;
         }
     }
+
+    private Stats getStatistics(long startTime, long endTime, int clientCount, int requestCount) {
+        double time = (endTime - startTime)/1_000_000_000.0;
+        int totalRequests = successfulRequests.get() + failedRequests.get();
+        double throughputS = (double) totalRequests / time;
+        double latencyMs = (double) latency.get() / totalRequests / 1_000_000.0;
+        return new Stats(clientCount, requestCount, totalRequests,
+                successfulRequests.get(), failedRequests.get(), time,
+                throughputS, latencyMs);
+    }
+
     private void handleConnect(SelectionKey key) throws IOException {
         SocketChannel channel = (SocketChannel) key.channel();
         if (channel.isConnectionPending()) {
@@ -97,6 +117,7 @@ public class AsyncSimulator implements Runnable {
                 updateGlobalStats(state);
                 channel.close();
                 key.cancel();
+                activeClients--;
                 return;
             }
             String command = state.commands.get(state.currentRequestIndex) + "\n";
@@ -120,6 +141,7 @@ public class AsyncSimulator implements Runnable {
         int bytes = channel.read(state.readBuffer);
         if (bytes == -1) {
             channel.close();
+            activeClients--;
             return;
         }
         state.readBuffer.flip();

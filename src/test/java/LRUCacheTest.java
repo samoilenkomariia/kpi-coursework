@@ -31,10 +31,8 @@ public class LRUCacheTest {
             cache.put(c, c);
         }
         int size = cache.size();
-        assertEquals(5, size, "expected size %d, got %d".formatted(5, size));
-        System.out.println("testing basic put and get: " + cache);
-        char mru = cache.get('Z');
-        assertEquals('Z', mru, "expected MRU element to be Z, but got %s".formatted(mru));
+        assertEquals(5, size);
+        assertEquals('Z', cache.get('Z'));
     }
 
     @Test
@@ -43,8 +41,7 @@ public class LRUCacheTest {
         for (char c = 'A'; c <= 'Z'; c++) {
             cache.put(c, c);
         }
-        System.out.println("testing concurrency lvl > capacity: " + cache);
-        assertEquals(5, cache.size(), "expected size 5, got %d".formatted( cache.size()));
+        assertEquals(5, cache.size());
     }
 
     @Test
@@ -53,8 +50,7 @@ public class LRUCacheTest {
         for (char c = 'A'; c <= 'Z'; c++) {
             cache.put(c, c);
         }
-        System.out.print("testing concurrency lvl == capacity " + cache);
-        assertEquals(5, cache.size(), "expected size 5, got %d".formatted( cache.size()));
+        assertEquals(5, cache.size());
     }
 
     @Test
@@ -88,7 +84,8 @@ public class LRUCacheTest {
         service.shutdown();
         assertFalse(failed.get(), "Exception(s) occurred during thread execution");
         int actualSize = cache.size();
-        assertTrue(actualSize <= capacity, "Cache size must not exceed set capacity %d, actual %d".formatted(capacity, actualSize));
-        Assertions.assertTimeoutPreemptively(Duration.ofSeconds(5), () -> assertTrue(cache.checkSizeInvariance(), "Cache did not pass size invariance verification"), "The invariance check went into infinite loop which means it did not pass");
+        assertTrue(actualSize <= capacity, "Cache size must not exceed set capacity %d, but actual %d".formatted(capacity, actualSize));
+        Assertions.assertTimeoutPreemptively(Duration.ofSeconds(5), () -> assertTrue(cache.checkSizeInvariance(), "Cache did not pass size invariance verification"),
+                "The invariance check went into infinite loop which means it did not pass");
     }
 }

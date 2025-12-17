@@ -1,5 +1,7 @@
 package com.mylrucachelib;
 
+import com.mylrucachelib.persistence.StringSerializer;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -14,7 +16,7 @@ import java.util.Queue;
 
 public class AsyncServer {
     private static final int DEFAULT_PORT = 8080;
-
+    private static final String DEFAULT_FILE = "lru-cache.dump";
     private LRUCache<String,String> cache;
     private ServerSocketChannel serverSocket;
     private Selector selector;
@@ -32,12 +34,17 @@ public class AsyncServer {
         if (args.length > 1) concurrencyLevel = Integer.parseInt(args[1]);
         if (args.length > 2) port = Integer.parseInt(args[2]);
         AsyncServer service = new AsyncServer();
-        service.start(capacity, concurrencyLevel, port);
+        service.start(capacity, concurrencyLevel, port, DEFAULT_FILE);
     }
 
-    public void start(int cap, int concLevel, int port) throws IOException {
+    public void start(int cap, int concLevel, int port, String filePath) throws IOException {
         this.cache = new LRUCache<>(cap, concLevel);
-
+        this.cache.enablePersistence(
+                filePath,
+                new StringSerializer(),
+                new StringSerializer()
+        );
+        this.cache.addShutdownHook();
         this.selector = Selector.open();
         serverSocket = ServerSocketChannel.open();
         serverSocket.bind(new InetSocketAddress("localhost", port));
@@ -55,10 +62,10 @@ public class AsyncServer {
                     if (key.isAcceptable()) {
                         handleAccept(key);
                     }
-                    if (key.isReadable()) {
+                    if (key.isValid() && key.isReadable()) {
                         handleRead(key);
                     }
-                    if (key.isWritable()) {
+                    if (key.isValid() && key.isWritable()) {
                         handleWrite(key);
                     }
                 } catch (IOException e) {
@@ -87,12 +94,12 @@ public class AsyncServer {
             return;
         }
 
-        state.readBuffer.flip();
+        state.readBuffer.flip(); // to read mode
         while (true) {
             int limit = state.readBuffer.limit();
             int position = state.readBuffer.position();
             int newlineIdx = -1;
-            for (int i = 0; i < limit; i++) {
+            for (int i = position; i < limit; i++) {
                 if (state.readBuffer.get(i) == '\n') {
                     newlineIdx = i;
                     break;
@@ -108,8 +115,8 @@ public class AsyncServer {
                         return;
                     }
                     ByteBuffer newBuf = ByteBuffer.allocate(newCap);
-                    state.readBuffer.position(0);
                     newBuf.put(state.readBuffer);
+                    newBuf.flip(); // to read mode
                     state.readBuffer = newBuf;
                 }
                 break;
@@ -119,7 +126,7 @@ public class AsyncServer {
             byte[] lineBytes = new byte[lineLength];
             state.readBuffer.get(lineBytes);
             state.readBuffer.get(); // skip \n
-            String line = new String(lineBytes, StandardCharsets.UTF_8);
+            String line = new String(lineBytes, StandardCharsets.UTF_8).trim();
 
             String response = processCommand(line) + "\n";
             state.writeQueue.add(ByteBuffer.wrap(response.getBytes(StandardCharsets.UTF_8)));
@@ -159,7 +166,7 @@ public class AsyncServer {
         String command;
         String key = null;
         String value = null;
-
+        long ttl = 0;
         if (firstSpace == -1) {
             command = line.toUpperCase();
         } else {
@@ -171,6 +178,15 @@ public class AsyncServer {
                 key = line.substring(firstSpace + 1, secondSpace);
                 value = line.substring(secondSpace + 1);
             }
+            int thirdSpace = line.indexOf(' ', secondSpace + 1);
+            if (thirdSpace != -1) {
+                try {
+                    ttl = Long.parseLong(line.substring(thirdSpace + 1));
+                    value = line.substring(secondSpace + 1, thirdSpace);
+                } catch (NumberFormatException e) {
+                    ttl = 0;
+                }
+            }
         }
 
         try {
@@ -179,7 +195,7 @@ public class AsyncServer {
                     if (key == null || value == null || key.isEmpty() || value.isEmpty()) {
                         return "ERROR_USAGE_PUT";
                     }
-                    this.cache.put(key, value);
+                    this.cache.put(key, value, ttl);
                     return "OK";
                 }
                 case "GET" -> {

@@ -1,5 +1,10 @@
 package com.mylrucachelib;
 
+import com.mylrucachelib.persistence.Serializer;
+import com.mylrucachelib.persistence.SnapshotManager;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -10,6 +15,7 @@ public class LRUCache<K,V> {
     private final int segmentMask;
     private final ScheduledExecutorService janitor;
     private final TimeSource clock;
+    private SnapshotManager<K,V> snapshotManager;
 
     public LRUCache(int capacity, int concurrencyLevel) {
         this(capacity, concurrencyLevel, System::currentTimeMillis);
@@ -97,5 +103,37 @@ public class LRUCache<K,V> {
     @Override
     public String toString() {
         return Arrays.toString(segments);
+    }
+
+    public void forEach(LRUCacheSegment.EntryConsumer<K,V> action) {
+        for (var segment : segments) {
+            segment.forEach(action);
+        }
+    }
+    
+    public void enablePersistence(String filePath, Serializer<K> keySerializer, Serializer<V> valueSerializer) {
+        this.snapshotManager = new SnapshotManager<>(filePath, keySerializer, valueSerializer, clock);
+        try {
+            this.snapshotManager.load(this);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to load snapshot ", e);
+        }
+    }
+    
+    public void saveSnapshot() throws IOException {
+        if (snapshotManager != null) {
+            snapshotManager.save(this);
+        }
+    }
+    
+    public void addShutdownHook() {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                saveSnapshot();
+                System.out.println("Cache snapshot saved");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }));
     }
 }

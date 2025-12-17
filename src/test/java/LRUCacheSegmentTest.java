@@ -26,8 +26,8 @@ public class LRUCacheSegmentTest {
         }
         System.out.println("testing capacity=1 " + cache);
         int size = cache.size();
-        assertEquals(1, size, "expected %d, got %d".formatted(1, size));
-        assertEquals('G', cache.get('G'), "expected G, got %s".formatted('G'));
+        assertEquals(1, size);
+        assertEquals('G', cache.get('G'));
     }
 
     @Test
@@ -38,7 +38,7 @@ public class LRUCacheSegmentTest {
         }
         System.out.println("testing size " + cache);
         int s = cache.size();
-        assertEquals(3, s, "expected %d, got %d".formatted(3, s));
+        assertEquals(3, s);
     }
 
     @Test
@@ -47,7 +47,6 @@ public class LRUCacheSegmentTest {
         for (char a = 'A'; a < 'F';  a++) {
             cache.put(a, a);
         }
-        System.out.println("testing eviction " + cache);
         assertNull(cache.get('A'), "key A should've been evicted");
         assertNull(cache.get('B'), "key B should've been evicted");
     }
@@ -67,10 +66,9 @@ public class LRUCacheSegmentTest {
         LRUCacheSegment<Character,Character> cache = new LRUCacheSegment<>(3);
         cache.put('K', null);
         cache.put('A', null);
-        System.out.println("testing put null value " + cache);
         int size = cache.size();
         int expected = 2;
-        assertEquals(expected, size, "expected cache size %d, but got %d".formatted(expected, size));
+        assertEquals(expected, size);
         assertNull(cache.get('K'));
         assertNull(cache.get('A'));
     }
@@ -82,13 +80,11 @@ public class LRUCacheSegmentTest {
             cache.put(a, a);
         }
         cache.put(null, 'D');
-        System.out.println("testing put null key " + cache);
         int size = cache.size();
         int expected = 3;
-        assertEquals(expected, size, "expected cache size %d, but got %d".formatted(expected, size));
+        assertEquals(expected, size);
         assertEquals('D', cache.get(null));
         cache.put(null, 'E');
-        System.out.println("testing update null key " + cache);
         assertEquals('E', cache.get(null));
     }
 
@@ -113,9 +109,9 @@ public class LRUCacheSegmentTest {
         int size = cache.size();
         cache.put('A', 'Z');
         char actual = cache.get('A');
-        assertEquals('Z', actual, "expected Z, got %s".formatted(actual));
+        assertEquals('Z', actual);
         int updatedSize = cache.size();
-        assertEquals(size, updatedSize, "Cache size should not have changed, expected %d, got %d".formatted(size, updatedSize));
+        assertEquals(size, updatedSize, "Cache size should not have changed");
     }
 
     @Test

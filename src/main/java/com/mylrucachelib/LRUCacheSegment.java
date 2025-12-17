@@ -12,6 +12,7 @@ public class LRUCacheSegment<K,V> {
     private final Lock lock = new ReentrantLock();
     private final TimeSource clock;
 
+    private Node<K,V> cleanupCursor;
     private class Node<K,V> {
         final K key;
         V value;
@@ -52,6 +53,7 @@ public class LRUCacheSegment<K,V> {
         this.tail = new Node<>(null, null);
         head.next = tail;
         tail.prev = head;
+        this.cleanupCursor = head;
     }
 
     @Override
@@ -65,6 +67,7 @@ public class LRUCacheSegment<K,V> {
     }
 
     private void removeNode(Node<K,V> node) {
+        if (node == cleanupCursor) cleanupCursor = node.prev;
         node.prev.next = node.next;
         node.next.prev = node.prev;
     }
@@ -156,20 +159,42 @@ public class LRUCacheSegment<K,V> {
         lock.lock();
         int removed = 0;
         try {
-            Iterator<Node<K,V>> iter = map.values().iterator();
             int checked = 0;
-            while (iter.hasNext() && checked < sampleSize) {
-                Node<K, V> node = iter.next();
-                if (node.isExpired()) {
-                    removeNode(node);
-                    iter.remove();
-                    removed++;
+            Node<K,V> current = cleanupCursor;
+            while (checked < sampleSize) {
+                if (current == tail) {
+                    current = head.next;
+                    if (current == tail) break;
                 }
+                if (current.isExpired()) {
+                    Node<K,V> nextNode = current.next;
+                    removeNode(current);
+                    map.remove(current.key);
+                    removed++;
+                    current = nextNode;
+                } else current = current.next;
                 checked++;
             }
+            this.cleanupCursor = current.prev;
         } finally {
             lock.unlock();
         }
         return removed;
+    }
+
+    public interface EntryConsumer<K, V> {
+        void accept(K key, V value, long expiryTime);
+    }
+
+    public void forEach(EntryConsumer<K,V> action) {
+        lock.lock();
+        try {
+            Node<K,V> current = head;
+            while ((current = current.next) != tail) {
+                action.accept(current.key, current.value, current.expireAtMs);
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 }

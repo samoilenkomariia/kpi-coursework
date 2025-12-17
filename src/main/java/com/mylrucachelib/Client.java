@@ -29,7 +29,7 @@ public class Client {
         if (args.length > 1) clients = Integer.parseInt(args[1]);
         if (args.length > 2) reqs = Integer.parseInt(args[2]);
         if (args.length > 3) keyRange = Integer.parseInt(args[3]);
-        com.mylrucachelib.Client client = new com.mylrucachelib.Client();
+        Client client = new Client();
         System.out.println(client.startTest(clients, reqs, port, keyRange));
     }
 
