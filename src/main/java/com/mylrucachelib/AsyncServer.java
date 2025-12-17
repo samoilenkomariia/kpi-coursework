@@ -45,6 +45,7 @@ public class AsyncServer {
         }
         if (cache != null) {
             cache.removeShutdownHook();
+            cache.shutdown();
         }
     }
 

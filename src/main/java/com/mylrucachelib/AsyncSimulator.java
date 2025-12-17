@@ -65,7 +65,7 @@ public class AsyncSimulator implements Callable<Stats> {
             }
             long start = System.nanoTime();
             while (!Thread.currentThread().isInterrupted() && activeClients > 0) {
-                int readyChannels = selector.select();
+                int readyChannels = selector.select(1000);
                 if (readyChannels == 0) continue;
 
                 Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
@@ -73,12 +73,18 @@ public class AsyncSimulator implements Callable<Stats> {
                     SelectionKey key = keys.next();
                     keys.remove();
                     if (!key.isValid()) continue;
-                    if (key.isConnectable()) {
-                        handleConnect(key);
-                    } else if (key.isValid() && key.isWritable()) {
-                        handleWrite(key);
-                    } else if (key.isValid() && key.isReadable()) {
-                        handleRead(key);
+                    try {
+                        if (key.isConnectable()) {
+                            handleConnect(key);
+                        } else if (key.isWritable()) {
+                            handleWrite(key);
+                        } else if (key.isReadable()) {
+                            handleRead(key);
+                        }
+                    } catch (IOException e) {
+                        key.cancel();
+                        try { key.channel().close(); } catch (IOException ignored) {}
+                        activeClients--;
                     }
                     if (selector.keys().isEmpty()) break;
                 }
@@ -88,6 +94,12 @@ public class AsyncSimulator implements Callable<Stats> {
         } catch (IOException e) {
             e.printStackTrace();
             return null;
+        } finally {
+            try {
+                if (selector != null) selector.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -141,6 +153,7 @@ public class AsyncSimulator implements Callable<Stats> {
         int bytes = channel.read(state.readBuffer);
         if (bytes == -1) {
             channel.close();
+            key.cancel();
             activeClients--;
             return;
         }
@@ -173,6 +186,7 @@ public class AsyncSimulator implements Callable<Stats> {
                 break;
             }
             // \n found, get the line
+            foundLine = true;
             int lineLength = newlineIdx - position;
             byte[] lineBytes = new byte[lineLength];
             state.readBuffer.get(lineBytes);
@@ -181,6 +195,13 @@ public class AsyncSimulator implements Callable<Stats> {
             String response = new String(lineBytes, StandardCharsets.UTF_8).trim();
             processResponse(state, response);
             state.currentRequestIndex++;
+            if (state.currentRequestIndex >= state.commands.size()) {
+                updateGlobalStats(state);
+                channel.close();
+                key.cancel();
+                activeClients--;
+                return;
+            }
         }
         if (foundLine) {
             key.interestOps(SelectionKey.OP_WRITE);
