@@ -16,6 +16,7 @@ public class LRUCache<K,V> {
     private final ScheduledExecutorService janitor;
     private final TimeSource clock;
     private SnapshotManager<K,V> snapshotManager;
+    private Thread shutdownHook;
 
     public LRUCache(int capacity, int concurrencyLevel) {
         this(capacity, concurrencyLevel, System::currentTimeMillis);
@@ -127,13 +128,23 @@ public class LRUCache<K,V> {
     }
     
     public void addShutdownHook() {
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        this.shutdownHook = new Thread(() -> {
             try {
                 saveSnapshot();
                 System.out.println("Cache snapshot saved");
             } catch (IOException e) {
-                e.printStackTrace();
+                System.err.println("Failed to save snapshot on shutdown: " + e.getMessage());
             }
-        }));
+        });
+        Runtime.getRuntime().addShutdownHook(this.shutdownHook);
+    }
+
+    public void removeShutdownHook() {
+        if (this.shutdownHook != null) {
+            try {
+                Runtime.getRuntime().removeShutdownHook(this.shutdownHook);
+            } catch (IllegalStateException ignored) {}
+            this.shutdownHook = null;
+        }
     }
 }

@@ -156,11 +156,25 @@ public class AsyncSimulator implements Callable<Stats> {
                     break;
                 }
             }
+            // no \n foud=nd
             if (newlineIdx == -1) {
+                if (state.readBuffer.limit() == state.readBuffer.capacity()) {
+                    int newCap = state.readBuffer.capacity()*2;
+                    if (newCap > 1024*1024) {
+                        System.err.println("Request too large, closing.");
+                        channel.close();
+                        return;
+                    }
+                    ByteBuffer newBuf = ByteBuffer.allocate(newCap);
+                    newBuf.put(state.readBuffer);
+                    newBuf.flip(); // to read mode
+                    state.readBuffer = newBuf;
+                }
                 break;
             }
-            foundLine = true;
-            byte[] lineBytes = new byte[newlineIdx - position];
+            // \n found, get the line
+            int lineLength = newlineIdx - position;
+            byte[] lineBytes = new byte[lineLength];
             state.readBuffer.get(lineBytes);
             state.readBuffer.get();
 

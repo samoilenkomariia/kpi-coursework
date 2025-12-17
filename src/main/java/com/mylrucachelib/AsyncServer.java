@@ -18,8 +18,9 @@ public class AsyncServer {
     private static final int DEFAULT_PORT = 8080;
     private static final String DEFAULT_FILE = "lru-cache.dump";
     private LRUCache<String,String> cache;
-    private ServerSocketChannel serverSocket;
+    private ServerSocketChannel serverSocketChannel;
     private Selector selector;
+    private volatile boolean running = false;
 
     static class ServerClientState {
         ByteBuffer readBuffer = ByteBuffer.allocate(1024);
@@ -37,6 +38,25 @@ public class AsyncServer {
         service.start(capacity, concurrencyLevel, port, DEFAULT_FILE);
     }
 
+    public void stop() {
+        running = false;
+        if (selector != null) {
+            selector.wakeup(); // Unblock the select() call immediately
+        }
+        if (cache != null) {
+            cache.removeShutdownHook();
+        }
+    }
+
+    private void close() {
+        try {
+            if (selector != null) selector.close();
+            if (serverSocketChannel != null) serverSocketChannel.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void start(int cap, int concLevel, int port, String filePath) throws IOException {
         this.cache = new LRUCache<>(cap, concLevel);
         this.cache.enablePersistence(
@@ -46,13 +66,17 @@ public class AsyncServer {
         );
         this.cache.addShutdownHook();
         this.selector = Selector.open();
-        serverSocket = ServerSocketChannel.open();
-        serverSocket.bind(new InetSocketAddress("localhost", port));
-        serverSocket.configureBlocking(false);
-        serverSocket.register(selector, SelectionKey.OP_ACCEPT);
+        serverSocketChannel = ServerSocketChannel.open();
+        serverSocketChannel.bind(new InetSocketAddress("localhost", port));
+        serverSocketChannel.configureBlocking(false);
+        serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+        port = getPort();
         System.out.println("Nio LRUCacheServer started on port " + port);
-        while (true) {
-            selector.select();
+        running = true;
+        while (running && selector.isOpen()) {
+            int readyChannels = selector.select();
+            if (!running) break;
+            if (readyChannels == 0) continue;
             Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
             while (iter.hasNext()) {
                 SelectionKey key = iter.next();
@@ -76,6 +100,7 @@ public class AsyncServer {
                 }
             }
         }
+        close();
     }
 
     private void handleAccept(SelectionKey key) throws IOException {
@@ -218,6 +243,14 @@ public class AsyncServer {
     }
 
     public int getPort() {
-        return serverSocket != null && !serverSocket.socket().isClosed() ? serverSocket.socket().getLocalPort() : 0;
+        try {
+            if (serverSocketChannel != null && serverSocketChannel.isOpen()) {
+                java.net.SocketAddress addr = serverSocketChannel.getLocalAddress();
+                if (addr instanceof InetSocketAddress) {
+                    return ((InetSocketAddress) addr).getPort();
+                }
+            }
+        } catch (IOException ignored) {}
+        return 0;
     }
 }
