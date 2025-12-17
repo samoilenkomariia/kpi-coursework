@@ -9,6 +9,8 @@ import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class LRUCache<K,V> {
     private final LRUCacheSegment<K,V>[] segments;
@@ -17,16 +19,24 @@ public class LRUCache<K,V> {
     private final TimeSource clock;
     private SnapshotManager<K,V> snapshotManager;
     private Thread shutdownHook;
+    private static final Logger logger = Logger.getLogger(LRUCache.class.getName());
+
+    static {
+        LoggerSetup.setupLogger(LRUCache.class.getName(), "cache.log", false);
+    }
 
     public LRUCache(int capacity, int concurrencyLevel) {
         this(capacity, concurrencyLevel, System::currentTimeMillis);
     }
 
     public LRUCache(int capacity, int concurrencyLevel, TimeSource clock) {
+        logger.info("LRUCache initialized. Cap: " + capacity + ", Concurrency: " + concurrencyLevel);
         if (concurrencyLevel <= 0) {
+            logger.severe("Concurrency level <= than 0.");
             throw new IllegalArgumentException("Illegal initial concurrency level: " + concurrencyLevel);
         }
         if (capacity <= 0) {
+            logger.severe("Capacity <= than 0.");
             throw new IllegalArgumentException("Illegal initial capacity: " + capacity);
         }
         this.clock = clock;
@@ -117,13 +127,17 @@ public class LRUCache<K,V> {
         try {
             this.snapshotManager.load(this);
         } catch (IOException e) {
+            logger.severe("Failed to load snapshot: " + e.getMessage());
             throw new UncheckedIOException("Failed to load snapshot ", e);
         }
     }
     
     public void saveSnapshot() throws IOException {
         if (snapshotManager != null) {
+            long start = System.currentTimeMillis();
             snapshotManager.save(this);
+            long duration = System.currentTimeMillis() - start;
+            logger.info("Snapshot saved in " + duration + "ms");
         }
     }
     
@@ -131,9 +145,9 @@ public class LRUCache<K,V> {
         this.shutdownHook = new Thread(() -> {
             try {
                 saveSnapshot();
-                System.out.println("Cache snapshot saved");
+                logger.info("Shutdown hook: Cache snapshot saved");
             } catch (IOException e) {
-                System.err.println("Failed to save snapshot on shutdown: " + e.getMessage());
+                logger.log(Level.SEVERE,"Failed to save snapshot on shutdown: " + e.getMessage());
             }
         });
         Runtime.getRuntime().addShutdownHook(this.shutdownHook);

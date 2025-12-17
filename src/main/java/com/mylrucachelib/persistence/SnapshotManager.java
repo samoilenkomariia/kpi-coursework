@@ -1,12 +1,15 @@
 package com.mylrucachelib.persistence;
 
 import com.mylrucachelib.LRUCache;
+import com.mylrucachelib.LoggerSetup;
+import com.mylrucachelib.ThreadedServer;
 import com.mylrucachelib.TimeSource;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.logging.Logger;
 import java.util.zip.CRC32;
 import java.util.zip.CheckedInputStream;
 import java.util.zip.CheckedOutputStream;
@@ -18,9 +21,9 @@ public class SnapshotManager<K, V> {
     private final Serializer<K> keySerializer;
     private final Serializer<V> valueSerializer;
     private final TimeSource clock;
-
-    public SnapshotManager(String path, Serializer<K> keySerializer, Serializer<V> valueSerializer) {
-        this(path, keySerializer, valueSerializer, System::currentTimeMillis);
+    private static final Logger logger = Logger.getLogger(SnapshotManager.class.getName());
+    static {
+        LoggerSetup.setupLogger(SnapshotManager.class.getName(), "persistence.log", false);
     }
 
     public SnapshotManager(String path, Serializer<K> keySer, Serializer<V> valSer, TimeSource clock) {
@@ -75,15 +78,17 @@ public class SnapshotManager<K, V> {
             // header
             int signature = in.readInt();
             if (signature != SIGNATURE) {
+                logger.severe("Invalid signature");
                 throw new IOException("Invalid file format: bad signature");
             }
             int version = in.readInt();
             if (version != VERSION) {
+                logger.severe("Unsupported version");
                 throw new IOException("Unsupported file version: " + version);
             }
             long timestamp = in.readLong();
             int count = in.readInt();
-            System.out.println("Recovering " + count + " items from " + timestamp);
+            logger.fine("Recovering " + count + " items from " + timestamp);
 
             // data
             for (int i = 0; i < count; i++) {
@@ -98,6 +103,7 @@ public class SnapshotManager<K, V> {
             long checksum = cis.getChecksum().getValue();
             long fileChecksum = in.readLong();
             if (checksum != fileChecksum) {
+                logger.severe("File corrupted, checksum mismatch");
                 throw new IOException("File corrupted: checksums do not match");
             }
         }

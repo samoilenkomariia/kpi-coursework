@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Client {
     private static final String HOST = "localhost";
@@ -19,6 +21,10 @@ public class Client {
     private final AtomicInteger failedRequests = new AtomicInteger(0);
     private final AtomicLong latency = new AtomicLong(0);
     private static final double WRITE_PROBABILITY = 0.3;
+    private final static Logger logger = Logger.getLogger(Client.class.getName());
+    static {
+        LoggerSetup.setupLogger(Client.class.getName(), "threaded-client.log", false);
+    }
 
     public static void main(String[] args) {
         int port = 8080;
@@ -55,11 +61,12 @@ public class Client {
 
     public Stats startTest(int clients, int requests, int port, int keyRange) {
         if (clients <= 0 || requests <= 0) {
+            logger.log(Level.SEVERE, "Client or requests must be greater than zero");
             throw new IllegalArgumentException("Invalid arguments");
         }
         List<String> commands = generateCommands(keyRange);
-        System.out.printf("Starting LRUCacheClient targeting %s:%d (Clients: %d, Reqs: %d)%n",
-                HOST, port, clients, requests);
+        logger.info(String.format("Starting LRUCacheClient targeting %s:%d (Clients: %d, Reqs: %d)%n",
+                HOST, port, clients, requests));
         ExecutorService pool = Executors.newFixedThreadPool(clients);
         long start = System.nanoTime();
         for (int i = 1; i <= clients; i++) {
@@ -68,7 +75,7 @@ public class Client {
         pool.shutdown();
         try {
             if (!pool.awaitTermination(2, TimeUnit.MINUTES)) {
-                System.err.println("Client test timed out");
+                logger.log(Level.SEVERE,"Client test timed out");
                 pool.shutdownNow();
             }
         } catch (InterruptedException e) {
@@ -136,6 +143,7 @@ public class Client {
                     else this.failedCount++;
                 }
             } catch (IOException e) {
+                logger.warning("Error working on client: " + e.getMessage());
                 this.failedCount -= i;
             } finally {
                 parent.latency.addAndGet(this.latency);

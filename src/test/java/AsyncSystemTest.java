@@ -1,5 +1,6 @@
 import com.mylrucachelib.AsyncRunner;
 import com.mylrucachelib.AsyncServer;
+import com.mylrucachelib.LoggerSetup;
 import com.mylrucachelib.Stats;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -18,6 +20,11 @@ public class AsyncSystemTest {
 
     private AsyncServer server;
     private Thread serverThread;
+
+    Logger logger = Logger.getLogger(AsyncSystemTest.class.getName());
+    static {
+        LoggerSetup.setupLogger(AsyncSystemTest.class.getName(), "async-system-TEST.log", true);
+    }
 
     @TempDir
     Path tempDir;
@@ -40,6 +47,7 @@ public class AsyncSystemTest {
         long start = System.currentTimeMillis();
         while (server.getPort() == 0) {
             if (System.currentTimeMillis() - start > 5000) {
+                logger.severe("Server failed to start");
                 throw new RuntimeException("Server did not bind port within 5 seconds");
             }
             try {
@@ -67,7 +75,8 @@ public class AsyncSystemTest {
             int reqsPerClient = 1000;
             int keyRange = 100;
             Stats stat = AsyncRunner.simulateStatic(server.getPort(), clients, reqsPerClient, keyRange);
-            System.out.println(stat);
+            logger.info(stat.toString());
+            logger.info(stat.toCSV());
             assertEquals(clients * reqsPerClient, stat.totalReqs(), "Total requests mismatch");
             assertEquals(stat.totalReqs(), stat.successfulReqs(), "All requests should succeed");
             assertEquals(0, stat.failedReqs(), "There should be no failed requests");
@@ -82,7 +91,8 @@ public class AsyncSystemTest {
             int keyRange = 100;
 
             Stats stat = AsyncRunner.simulateStatic(server.getPort(), clients, reqsPerClient, keyRange);
-            System.out.println(stat);
+            logger.info(stat.toString());
+            logger.info(stat.toCSV());
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -97,7 +107,8 @@ public class AsyncSystemTest {
             int keyRange = 250;
 
             Stats stat = AsyncRunner.simulateStatic(server.getPort(), clients, reqsPerClient, keyRange);
-            System.out.println(stat);
+            logger.info(stat.toString());
+            logger.info(stat.toCSV());
 
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
@@ -113,7 +124,8 @@ public class AsyncSystemTest {
             int keyRange = 5;
 
             Stats stat = AsyncRunner.simulateStatic(server.getPort(), clients, reqsPerClient, keyRange);
-            System.out.println(stat);
+            logger.info(stat.toString());
+            logger.info(stat.toCSV());
 
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });

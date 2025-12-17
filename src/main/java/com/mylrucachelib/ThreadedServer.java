@@ -1,5 +1,7 @@
 package com.mylrucachelib;
 
+import org.apache.commons.math3.analysis.function.Log;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -8,6 +10,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ThreadedServer {
     private static final int DEFAULT_PORT = 8080;
@@ -16,7 +20,10 @@ public class ThreadedServer {
     private LRUCache<String,String> cache;
     private ServerSocket serverSocket;
     private ExecutorService threadPool;
-
+    private final static Logger logger = Logger.getLogger(ThreadedServer.class.getName());
+    static {
+        LoggerSetup.setupLogger(ThreadedServer.class.getName(), "threaded-server.log", true);
+    }
     public static void main(String[] args) throws IOException {
         int capacity = 100;
         int concurrencyLevel = 16;
@@ -31,11 +38,10 @@ public class ThreadedServer {
     public void start(int cap, int concLevel, int port) throws IOException {
         this.cache = new LRUCache<>(cap, concLevel);
         this.threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
-
         try (ServerSocket socket = new ServerSocket(port)) {
             this.serverSocket = socket;
             port = socket.getLocalPort();
-            System.out.println("Starting LRU Cache service on port " + socket.getLocalPort());
+            logger.info("Starting LRU Cache service on port " + socket.getLocalPort());
 
             while (!socket.isClosed()) {
                 try {
@@ -43,7 +49,7 @@ public class ThreadedServer {
                     threadPool.submit(new ClientHandler(clientSocket, this.cache));
                 } catch (IOException e) {
                     if (socket.isClosed()) {
-                        System.out.println("Server stopped on port " + port);
+                        logger.info("Server stopped on port " + port);
                         break;
                     }
                     e.printStackTrace();
@@ -133,6 +139,7 @@ public class ThreadedServer {
                 }
             } catch (Exception e) {
                 output.println("ERROR_INTERNAL " + e.getMessage());
+                logger.log(Level.WARNING, "Error processing command: ", e);
             }
         }
     }

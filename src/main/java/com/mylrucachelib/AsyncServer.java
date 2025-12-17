@@ -13,6 +13,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class AsyncServer {
     private static final int DEFAULT_PORT = 8080;
@@ -21,6 +23,7 @@ public class AsyncServer {
     private ServerSocketChannel serverSocketChannel;
     private Selector selector;
     private volatile boolean running = false;
+    private static final Logger logger = Logger.getLogger(AsyncServer.class.getName());
 
     static class ServerClientState {
         ByteBuffer readBuffer = ByteBuffer.allocate(1024);
@@ -59,6 +62,7 @@ public class AsyncServer {
     }
 
     public void start(int cap, int concLevel, int port, String filePath) throws IOException {
+        LoggerSetup.setupLogger(AsyncServer.class.getName(), "async-server.log", true);
         this.cache = new LRUCache<>(cap, concLevel);
         this.cache.enablePersistence(
                 filePath,
@@ -72,7 +76,7 @@ public class AsyncServer {
         serverSocketChannel.configureBlocking(false);
         serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
         port = getPort();
-        System.out.println("Nio LRUCacheServer started on port " + port);
+        logger.info("Nio LRU Cache Server started on port " + port);
         running = true;
         while (running && selector.isOpen()) {
             int readyChannels = selector.select();
@@ -94,6 +98,7 @@ public class AsyncServer {
                         handleWrite(key);
                     }
                 } catch (IOException e) {
+                    logger.log(Level.SEVERE, "IO Error in event loop", e);
                     key.cancel();
                     try {
                         key.channel().close();
@@ -102,6 +107,7 @@ public class AsyncServer {
             }
         }
         close();
+        logger.info("Server stopped on port" + port);
     }
 
     private void handleAccept(SelectionKey key) throws IOException {
@@ -109,6 +115,7 @@ public class AsyncServer {
         SocketChannel client = server.accept();
         client.configureBlocking(false);
         client.register(selector, SelectionKey.OP_READ, new ServerClientState());
+        logger.fine("Accepted new connection: " + client.getRemoteAddress());
     }
 
     private void handleRead(SelectionKey key) throws IOException {
@@ -136,7 +143,7 @@ public class AsyncServer {
                 if (state.readBuffer.limit() == state.readBuffer.capacity()) {
                     int newCap = state.readBuffer.capacity()*2;
                     if (newCap > 1024*1024) {
-                        System.err.println("Request too large, closing.");
+                        logger.log(Level.SEVERE, "Request too large, closing.");
                         channel.close();
                         return;
                     }
@@ -178,6 +185,7 @@ public class AsyncServer {
                 }
             }
         } catch (IOException e) {
+            logger.log(Level.WARNING, "IO Error in event loop", e);
             key.cancel();
             try {
                 key.channel().close();
@@ -239,6 +247,7 @@ public class AsyncServer {
                 }
             }
         } catch (Exception e) {
+            logger.log(Level.WARNING, "Error processing command: " + line, e);
             return "ERROR_INTERNAL " + e.getMessage();
         }
     }

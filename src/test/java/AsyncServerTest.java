@@ -1,4 +1,5 @@
 import com.mylrucachelib.AsyncServer;
+import com.mylrucachelib.LoggerSetup;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,6 +10,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,7 +21,10 @@ public class AsyncServerTest {
     private static final int CONC_LVL = 16;
     private static AsyncServer server;
     private static Thread serverThread;
-
+    Logger logger = Logger.getLogger(AsyncServerTest.class.getName());
+    static {
+        LoggerSetup.setupLogger(AsyncServerTest.class.getName(), "async-server-TEST.log", true);
+    }
     @TempDir
     Path tempDir;
 
@@ -31,7 +36,7 @@ public class AsyncServerTest {
             try {
                 server.start(CAPACITY, CONC_LVL, PORT, uniqueDumpFile);
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.severe(e.getMessage());
             }
         });
         serverThread.setDaemon(true);
@@ -39,13 +44,14 @@ public class AsyncServerTest {
         long start = System.currentTimeMillis();
         while (server.getPort() == 0) {
             if (System.currentTimeMillis() - start > 5000) {
+                logger.severe("Server failed to start within 5s");
                 throw new RuntimeException("Server did not bind port within 5 seconds");
             }
             try {
                 Thread.sleep(50);
             } catch (InterruptedException ignored) {}
         }
-        System.out.println("Async LRUCacheService started on port " + server.getPort());
+        logger.fine("Async LRUCacheService started on port " + server.getPort());
     }
 
     @AfterEach

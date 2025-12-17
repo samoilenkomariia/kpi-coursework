@@ -14,6 +14,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class AsyncSimulator implements Callable<Stats> {
     private static final String HOST = "localhost";
@@ -23,9 +25,10 @@ public class AsyncSimulator implements Callable<Stats> {
     private final AtomicInteger successfulRequests = new AtomicInteger(0);
     private final AtomicInteger failedRequests = new AtomicInteger(0);
     private final AtomicLong latency = new AtomicLong(0);
-    private int reqsPerClient = 1000;
+    private final int reqsPerClient;
     private Selector selector;
     private final List<List<String>> allClientCommands;
+    private static final Logger logger = Logger.getLogger(AsyncSimulator.class.getName());
 
     public AsyncSimulator(int port, int clientCount, int requestsPerClient, int keyRange) {
         this.port = port;
@@ -36,6 +39,7 @@ public class AsyncSimulator implements Callable<Stats> {
         for(int i = 0; i < clientCount; i++) {
             allClientCommands.add(generateCommands(requestsPerClient, keyRange));
         }
+        LoggerSetup.setupLogger(AsyncSimulator.class.getName(), "simulator.log", false);
     }
 
     static class ClientState {
@@ -82,6 +86,7 @@ public class AsyncSimulator implements Callable<Stats> {
                             handleRead(key);
                         }
                     } catch (IOException e) {
+                        logger.log(Level.SEVERE,"Exception in client processing while handling key: " + key);
                         key.cancel();
                         try { key.channel().close(); } catch (IOException ignored) {}
                         activeClients--;
@@ -92,14 +97,12 @@ public class AsyncSimulator implements Callable<Stats> {
             long end = System.nanoTime();
             return getStatistics(start, end, clientCount, reqsPerClient);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error connecting to server", e);
             return null;
         } finally {
             try {
                 if (selector != null) selector.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            } catch (IOException ignored) {}
         }
     }
 
@@ -174,7 +177,7 @@ public class AsyncSimulator implements Callable<Stats> {
                 if (state.readBuffer.limit() == state.readBuffer.capacity()) {
                     int newCap = state.readBuffer.capacity()*2;
                     if (newCap > 1024*1024) {
-                        System.err.println("Request too large, closing.");
+                        logger.warning("Request too large (" + newCap + "), closing connection.");
                         channel.close();
                         return;
                     }
