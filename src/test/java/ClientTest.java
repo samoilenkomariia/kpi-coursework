@@ -67,7 +67,6 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(10, 100, service.getPort(), 10);
             System.out.println(stat);
-            System.out.println(stat.toCSV());
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -77,7 +76,6 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(50, 10000, service.getPort(), 50);
             System.out.println(stat);
-            System.out.println(stat.toCSV());
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -87,7 +85,6 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(service.getPort()); // 50 threads, 1000 reqs per thread
             System.out.println(stat);
-            System.out.println(stat.toCSV());
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -97,7 +94,6 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(100, 1000, service.getPort(), 100);
             System.out.println(stat);
-            System.out.println(stat.toCSV());
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -107,7 +103,6 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(200, 1000, service.getPort(), 200);
             System.out.println(stat);
-            System.out.println(stat.toCSV());
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -117,7 +112,6 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(500, 1000, service.getPort(), 500);
             System.out.println(stat);
-            System.out.println(stat.toCSV());
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -127,7 +121,6 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(1000, 1000, service.getPort(), 1000);
             System.out.println(stat);
-            System.out.println(stat.toCSV());
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -138,7 +131,6 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(100, 1000, service.getPort(), 5);
             System.out.println(stat);
-            System.out.println(stat.toCSV());
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -148,7 +140,6 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(200, 1000, service.getPort(), 5);
             System.out.println(stat);
-            System.out.println(stat.toCSV());
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }

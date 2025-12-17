@@ -12,7 +12,6 @@ import java.util.concurrent.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@TestMethodOrder(MethodOrderer.Random.class)
 public class ThreadedServerTest {
     private static final int PORT = 0;
     private static final int CAPACITY = 100;

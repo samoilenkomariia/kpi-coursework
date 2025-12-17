@@ -55,7 +55,7 @@ public class LRUCacheTest {
 
     @Test
     void testConcurrentCapacityInvariance() throws InterruptedException {
-        int capacity = 100;
+        int capacity = 30;
         LRUCache<String,Integer> cache = new LRUCache<>(capacity, 16);
         int threads = 50;
         int operationsPerThread = 10000;
@@ -64,11 +64,10 @@ public class LRUCacheTest {
         AtomicBoolean failed = new AtomicBoolean(false);
 
         for (int i = 0; i < threads; i++) {
-            final int id = i;
             service.submit(() -> {
                 try {
                     for (int j = 0; j < operationsPerThread; j++) {
-                        String key = "key-" + id;
+                        String key = "key-" + j;
                         cache.put(key, j);
                         if (j % 2 == 0) cache.get(key);
                     }
