@@ -1,4 +1,5 @@
 import com.mylrucachelib.LRUCache;
+import com.mylrucachelib.LoggerSetup;
 import com.mylrucachelib.TimeSource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -9,10 +10,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class LRUCacheTest {
+
+    private final static Logger logger = Logger.getLogger(LRUCacheTest.class.getName());
+    static {
+        LoggerSetup.setupLogger(LRUCacheTest.class.getName(), "lrucache-TEST.log", true);
+    }
 
     @Test
     void testZeroCapacity() {
@@ -60,12 +67,14 @@ public class LRUCacheTest {
         int threads = 50;
         int operationsPerThread = 10000;
         ExecutorService service = Executors.newFixedThreadPool(threads);
+        CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch latch = new CountDownLatch(threads);
         AtomicBoolean failed = new AtomicBoolean(false);
 
         for (int i = 0; i < threads; i++) {
             service.submit(() -> {
                 try {
+                    startLatch.await();
                     for (int j = 0; j < operationsPerThread; j++) {
                         String key = "key-" + j;
                         cache.put(key, j);
@@ -73,12 +82,13 @@ public class LRUCacheTest {
                     }
                 } catch (Exception e) {
                     failed.set(true);
-                    e.printStackTrace();
+                    logger.warning(e.getMessage());
                 } finally {
                     latch.countDown();
                 }
             });
         }
+        startLatch.countDown();
         latch.await();
         service.shutdown();
         assertFalse(failed.get(), "Exception(s) occurred during thread execution");
