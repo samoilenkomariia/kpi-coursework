@@ -29,7 +29,7 @@ public class AsyncServerTest {
     Path tempDir;
 
     @BeforeEach
-    void startServer() throws IOException {
+    void startServer() {
         String uniqueDumpFile = tempDir.resolve("server.dump").toAbsolutePath().toString();
         server = new AsyncServer();
         serverThread = new Thread(() -> {
@@ -71,10 +71,8 @@ public class AsyncServerTest {
             out.flush();
             out.write("tial 123\n".getBytes(StandardCharsets.UTF_8));
             out.flush();
-
             String response = in.readLine();
             assertEquals("OK", response);
-
             out.write("get partial\n".getBytes(StandardCharsets.UTF_8));
             assertEquals("VALUE 123", in.readLine());
         }
@@ -103,10 +101,8 @@ public class AsyncServerTest {
             char[] chars = new char[5000];
             Arrays.fill(chars, 'A');
             String bigVal = new String(chars);
-
             out.println("PUT big " + bigVal);
             assertEquals("OK", in.readLine());
-
             out.println("GET big");
             String response = in.readLine();
             assertEquals("VALUE " + bigVal, response);
@@ -118,8 +114,7 @@ public class AsyncServerTest {
         try (Socket socket = new Socket("localhost", server.getPort());
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              PrintWriter writer = new PrintWriter(socket.getOutputStream(), true)) {
-
-            writer.println("DANCE key");
+            writer.println("D key");
             assertEquals("ERROR_UNKNOWN_COMMAND", reader.readLine());
             writer.println("PUT key");
             assertEquals("ERROR_USAGE_PUT", reader.readLine());

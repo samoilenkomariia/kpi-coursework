@@ -2,6 +2,7 @@ import com.mylrucachelib.AsyncRunner;
 import com.mylrucachelib.AsyncServer;
 import com.mylrucachelib.LoggerSetup;
 import com.mylrucachelib.Stats;
+import com.mylrucachelib.util.CSVReporter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,7 @@ public class AsyncSystemTest {
     private AsyncServer server;
     private Thread serverThread;
 
-    Logger logger = Logger.getLogger(AsyncSystemTest.class.getName());
+    private static final Logger logger = Logger.getLogger(AsyncSystemTest.class.getName());
     static {
         LoggerSetup.setupLogger(AsyncSystemTest.class.getName(), "async-system-TEST.log", true);
     }
@@ -76,7 +77,11 @@ public class AsyncSystemTest {
             int keyRange = 100;
             Stats stat = AsyncRunner.simulateStatic(server.getPort(), clients, reqsPerClient, keyRange);
             logger.info(stat.toString());
-            logger.info(stat.toCSV());
+            CSVReporter.record(
+                    this.getClass().getSimpleName(),
+                    "testSmallLoad",
+                    stat
+            );
             assertEquals(clients * reqsPerClient, stat.totalReqs(), "Total requests mismatch");
             assertEquals(stat.totalReqs(), stat.successfulReqs(), "All requests should succeed");
             assertEquals(0, stat.failedReqs(), "There should be no failed requests");
@@ -89,27 +94,32 @@ public class AsyncSystemTest {
             int clients = 50;
             int reqsPerClient = 2000;
             int keyRange = 100;
-
             Stats stat = AsyncRunner.simulateStatic(server.getPort(), clients, reqsPerClient, keyRange);
             logger.info(stat.toString());
-            logger.info(stat.toCSV());
+            CSVReporter.record(
+                    this.getClass().getSimpleName(),
+                    "testMediumLoad",
+                    stat
+            );
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
 
     // stress test
-    // This tests if the Selector can handle many registered keys without crashing
+    // this tests if the Selector can handle many registered keys without crashing
     @Test
     void testHighConcurrency() {
         assertDoesNotThrow(() -> {
             int clients = 500;
             int reqsPerClient = 1000;
             int keyRange = 250;
-
             Stats stat = AsyncRunner.simulateStatic(server.getPort(), clients, reqsPerClient, keyRange);
             logger.info(stat.toString());
-            logger.info(stat.toCSV());
-
+            CSVReporter.record(
+                    this.getClass().getSimpleName(),
+                    "testHighConcurrency",
+                    stat
+            );
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -119,14 +129,17 @@ public class AsyncSystemTest {
     @Test
     void testHotKeyContention() {
         assertDoesNotThrow(() -> {
-            int clients = 1;
-            int reqsPerClient = 10;
+            int clients = 100;
+            int reqsPerClient = 100;
             int keyRange = 5;
 
             Stats stat = AsyncRunner.simulateStatic(server.getPort(), clients, reqsPerClient, keyRange);
             logger.info(stat.toString());
-            logger.info(stat.toCSV());
-
+            CSVReporter.record(
+                    this.getClass().getSimpleName(),
+                    "testHotKeyContention",
+                    stat
+            );
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }

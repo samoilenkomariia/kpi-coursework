@@ -2,6 +2,7 @@ import com.mylrucachelib.Client;
 import com.mylrucachelib.LoggerSetup;
 import com.mylrucachelib.ThreadedServer;
 import com.mylrucachelib.Stats;
+import com.mylrucachelib.util.CSVReporter;
 import org.junit.jupiter.api.*;
 
 import java.io.IOException;
@@ -19,7 +20,7 @@ public class ClientTest {
     private static final int CAPACITY = 100;
     private static final int CONC_LVL = 16;
     private ThreadedServer service;
-    Logger logger = Logger.getLogger(ClientTest.class.getName());
+    private static final Logger logger = Logger.getLogger(ClientTest.class.getName());
     static {
         LoggerSetup.setupLogger(ClientTest.class.getName(), "threaded-client-TEST.log", true);
     }
@@ -74,7 +75,11 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(10, 100, service.getPort(), 10);
             logger.info(stat.toString());
-            logger.info(stat.toCSV());
+            CSVReporter.record(
+                    this.getClass().getSimpleName(),
+                    "test10Client100ReqsRunningSuccessfully",
+                    stat
+            );
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -84,7 +89,11 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(50, 10000, service.getPort(), 50);
             logger.info(stat.toString());
-            logger.info(stat.toCSV());
+            CSVReporter.record(
+                    this.getClass().getSimpleName(),
+                    "test50Clients10000Requests",
+                    stat
+            );
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -94,7 +103,11 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(service.getPort()); // 50 threads, 1000 reqs per thread
             logger.info(stat.toString());
-            logger.info(stat.toCSV());
+            CSVReporter.record(
+                    this.getClass().getSimpleName(),
+                    "testDefaultClientRequests",
+                    stat
+            );
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -104,7 +117,11 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(100, 1000, service.getPort(), 100);
             logger.info(stat.toString());
-            logger.info(stat.toCSV());
+            CSVReporter.record(
+                    this.getClass().getSimpleName(),
+                    "test100Clients1000Requests",
+                    stat
+            );
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -114,7 +131,11 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(200, 1000, service.getPort(), 200);
             logger.info(stat.toString());
-            logger.info(stat.toCSV());
+            CSVReporter.record(
+                    this.getClass().getSimpleName(),
+                    "test200Clients1000Requests",
+                    stat
+            );
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -124,7 +145,11 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(500, 1000, service.getPort(), 500);
             logger.info(stat.toString());
-            logger.info(stat.toCSV());
+            CSVReporter.record(
+                    this.getClass().getSimpleName(),
+                    "test500Clients1000Requests",
+                    stat
+            );
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -134,7 +159,11 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(1000, 1000, service.getPort(), 1000);
             logger.info(stat.toString());
-            logger.info(stat.toCSV());
+            CSVReporter.record(
+                    this.getClass().getSimpleName(),
+                    "test1000Clients1000Requests",
+                    stat
+            );
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -145,7 +174,11 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(100, 1000, service.getPort(), 5);
             logger.info(stat.toString());
-            logger.info(stat.toCSV());
+            CSVReporter.record(
+                    this.getClass().getSimpleName(),
+                    "testHotKeyContention100clients1000Requests",
+                    stat
+            );
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }
@@ -155,7 +188,11 @@ public class ClientTest {
         assertDoesNotThrow(() -> {
             Stats stat = Client.runTest(200, 1000, service.getPort(), 5);
             logger.info(stat.toString());
-            logger.info(stat.toCSV());
+            CSVReporter.record(
+                    this.getClass().getSimpleName(),
+                    "testHotKeyContention200clients1000Requests",
+                    stat
+            );
             assertEquals(stat.totalReqs(), stat.successfulReqs());
         });
     }

@@ -15,7 +15,7 @@ public class AsyncServerSecurityBoundaryTest {
     @TempDir Path tempDir;
 
     @BeforeEach
-    void start() throws IOException {
+    void start() {
         server = new AsyncServer();
         new Thread(() -> {
             try {
@@ -47,8 +47,7 @@ public class AsyncServerSecurityBoundaryTest {
             out.write("\n".getBytes());
             out.flush();
 
-            // 4. Verify Server closed connection (Read returns -1)
-            // It might take a moment for the server to process and close
+            // verify server to close the connection, it might take some time for the server to process and close
             socket.setSoTimeout(2000);
             int result = socket.getInputStream().read();
             assertEquals(-1, result, "Server should have closed connection due to size limit");
