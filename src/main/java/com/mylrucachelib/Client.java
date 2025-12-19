@@ -21,12 +21,12 @@ public class Client {
     private final AtomicInteger failedRequests = new AtomicInteger(0);
     private final AtomicLong latency = new AtomicLong(0);
     private static final double WRITE_PROBABILITY = 0.3;
-    private final static Logger logger = Logger.getLogger(Client.class.getName());
+    private static final Logger logger = Logger.getLogger(Client.class.getName());
     static {
         LoggerSetup.setupLogger(Client.class.getName(), "threaded-client.log", false);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         int port = 8080;
         int clients = CLIENTS;
         int reqs = REQUESTS_PER_CLIENT;
@@ -39,11 +39,11 @@ public class Client {
         System.out.println(client.startTest(clients, reqs, port, keyRange));
     }
 
-    public static Stats runTest(int clients, int requests, int port, int keyRange) {
+    public static Stats runTest(int clients, int requests, int port, int keyRange) throws InterruptedException {
         return new com.mylrucachelib.Client().startTest(clients, requests, port, keyRange);
     }
 
-    public static Stats runTest(int port) {
+    public static Stats runTest(int port) throws InterruptedException {
         return runTest(CLIENTS, REQUESTS_PER_CLIENT, port, CLIENTS);
     }
 
@@ -59,7 +59,7 @@ public class Client {
         return commands;
     }
 
-    public Stats startTest(int clients, int requests, int port, int keyRange) {
+    public Stats startTest(int clients, int requests, int port, int keyRange) throws InterruptedException {
         if (clients <= 0 || requests <= 0) {
             logger.log(Level.SEVERE, "Client or requests must be greater than zero");
             throw new IllegalArgumentException("Invalid arguments");
@@ -68,19 +68,19 @@ public class Client {
         logger.info(String.format("Starting LRUCacheClient targeting %s:%d (Clients: %d, Reqs: %d)%n",
                 HOST, port, clients, requests));
         ExecutorService pool = Executors.newFixedThreadPool(clients);
+        CountDownLatch startGate = new CountDownLatch(1);
+        CountDownLatch endGate = new CountDownLatch(clients);
         long start = System.nanoTime();
         for (int i = 1; i <= clients; i++) {
-            pool.submit(new ClientWorker(port, requests, keyRange, commands, this));
+            pool.submit(new ClientWorker(port, requests, keyRange, commands, this, startGate, endGate));
+        }
+        startGate.countDown();
+        try {
+            endGate.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
         pool.shutdown();
-        try {
-            if (!pool.awaitTermination(2, TimeUnit.MINUTES)) {
-                logger.log(Level.SEVERE,"Client test timed out");
-                pool.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
         long end = System.nanoTime();
         return getStatistics(start, end, clients, requests);
     }
@@ -100,17 +100,22 @@ public class Client {
         private final int requests;
         private final int keyRange;
         private final List<String> commands;
-        private final com.mylrucachelib.Client parent;
+        private final Client parent;
         private int successCount = 0;
         private int failedCount = 0;
         private long latency = 0L;
+        private final CountDownLatch startGate;
+        private final CountDownLatch endGate;
 
-        public ClientWorker(int targetPort, int requestCount, int keyRange, List<String> commands, com.mylrucachelib.Client parent) {
+        public ClientWorker(int targetPort, int requestCount, int keyRange, List<String> commands, Client parent,
+                            CountDownLatch startGate, CountDownLatch endGate) {
             this.targetPort = targetPort;
             this.requests = requestCount;
             this.commands = commands;
             this.keyRange = keyRange;
             this.parent = parent;
+            this.startGate = startGate;
+            this.endGate = endGate;
         }
 
         private boolean performRequest(PrintWriter output, BufferedReader input, int index) throws IOException {
@@ -133,6 +138,7 @@ public class Client {
                     BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                     PrintWriter output = new PrintWriter(socket.getOutputStream(), true)
             ) {
+                startGate.await();
                 for (i = 0; i < requests; i++) {
                     int index = i % keyRange;
                     long opStartTime = System.nanoTime();
@@ -142,13 +148,14 @@ public class Client {
                     if (success) this.successCount++;
                     else this.failedCount++;
                 }
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException e) {
                 logger.warning("Error working on client: " + e.getMessage());
                 this.failedCount -= i;
             } finally {
                 parent.latency.addAndGet(this.latency);
                 parent.successfulRequests.addAndGet(this.successCount);
                 parent.failedRequests.addAndGet(this.failedCount);
+                endGate.countDown();
             }
         }
     }
